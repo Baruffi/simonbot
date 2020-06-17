@@ -1,0 +1,9 @@
+{
+  "name": "simonbot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "eris": "^0.13.2"
+  }
+}
