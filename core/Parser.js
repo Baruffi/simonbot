@@ -1,39 +1,35 @@
-function Parser({ callsign, commands }) {
+function Parser({ prefix, commands }) {
   function generateCommand(commandInstructions) {
     const command = (commandArgs) => {
-      function execute(instructions, args) {
+      const index = commandInstructions.indexOf('->');
+      const variables = commandInstructions.slice(0, index === -1 ? 0 : index);
+      const executionInstructions = commandInstructions.slice(index + 1);
+
+      function execute(instructions) {
         const output = [];
 
         for (const instruction of instructions) {
-          if (instruction.startsWith(callsign)) {
-            let identifier = instruction.slice(callsign.length);
+          const arg = commandArgs[variables.indexOf(instruction)];
+
+          if (arg) {
+            output.push(arg);
+            continue;
+          }
+
+          if (instruction.startsWith(prefix)) {
+            const identifier = instruction.slice(prefix.length);
 
             if (identifier) {
-              if (identifier.startsWith(callsign) && identifier !== callsign) {
-                identifier = execute([identifier], args);
-              }
-
-              if (identifier === callsign) {
-                output.push(args.join(' '));
-                continue;
-              }
-
-              if (/^\d+/.test(identifier)) {
-                const number = parseInt(identifier);
-                const arg = args[number];
-
-                if (arg) {
-                  output.push(arg);
-                }
-
-                continue;
-              }
-
               const subcommand = commands[identifier];
 
               if (subcommand) {
-                output.push(subcommand(args));
-                continue;
+                const subinstructions = instructions.slice(
+                  instructions.indexOf(instruction) + 1,
+                );
+                const subargs = execute(subinstructions).split(' ');
+
+                output.push(subcommand(subargs));
+                break;
               } else {
                 return `Subcommand not found '${identifier}'.`;
               }
@@ -46,7 +42,13 @@ function Parser({ callsign, commands }) {
         return output.join(' ').trim();
       }
 
-      return execute(commandInstructions, commandArgs);
+      if (variables.length > commandArgs.length) {
+        return `Insufficient arguments! This command requires the following arguments: '${variables.join(
+          ' ',
+        )}'`;
+      }
+
+      return execute(executionInstructions);
     };
 
     return command;
@@ -55,8 +57,8 @@ function Parser({ callsign, commands }) {
   function parse(msg) {
     const content = msg.trim();
 
-    if (content.startsWith(callsign)) {
-      const tokens = content.slice(callsign.length).split(' ');
+    if (content.startsWith(prefix)) {
+      const tokens = content.slice(prefix.length).split(' ');
       const identifier = tokens[0];
       const params = tokens.slice(1);
 

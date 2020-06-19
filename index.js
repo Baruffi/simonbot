@@ -3,7 +3,7 @@ const Eris = require('eris');
 const Parser = require('./core/Parser');
 const { token } = require('./auth.json');
 
-const parser = Parser({ callsign: '!', commands: {} });
+const parser = Parser({ prefix: '!', commands: {} });
 
 const client = Client(parser);
 
