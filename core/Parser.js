@@ -50,7 +50,7 @@ function Parser({ prefix, commands }) {
         const subcommand = commands[identifier];
 
         if (subcommand) {
-          const subargs = execute2(subinstructions);
+          const subargs = execute(subinstructions);
 
           return subcommand(subargs);
         } else {
@@ -58,12 +58,12 @@ function Parser({ prefix, commands }) {
         }
       }
 
-      function execute2(instructions) {
+      function execute(instructions) {
         const output = [];
 
         for (const [index, instruction] of instructions.entries()) {
           if (typeof instruction === 'string') {
-            if (instruction.startsWith(prefix)) {
+            if (instruction.startsWith(prefix) && instruction !== prefix) {
               const identifier = instruction.slice(prefix.length);
               const subinstructions = instructions.slice(index + 1);
               output.push(executeSubcommand(identifier, subinstructions));
@@ -72,7 +72,7 @@ function Parser({ prefix, commands }) {
               output.push(executeInstruction(instruction));
             }
           } else {
-            output.push(...execute2(instruction));
+            output.push(...execute(instruction));
           }
         }
 
@@ -95,7 +95,7 @@ function Parser({ prefix, commands }) {
         );
       }
 
-      return execute2(executionInstructions).join(' ').trim();
+      return execute(executionInstructions).join(' ').trim();
     }
 
     if (!(successVars && successInst)) {
