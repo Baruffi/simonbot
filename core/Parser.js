@@ -1,15 +1,48 @@
 function Parser({ prefix, commands }) {
   function generateCommand(commandInstructions) {
     const command = (commandArgs) => {
-      const index = commandInstructions.indexOf('->');
-      const variables = commandInstructions.slice(0, index === -1 ? 0 : index);
-      const executionInstructions = commandInstructions.slice(index + 1);
+      const arrow = commandInstructions.indexOf('->');
+      const variables = commandInstructions.slice(0, arrow === -1 ? 0 : arrow);
+      const executionInstructions = commandInstructions.slice(arrow + 1);
+
+      while (commandArgs.includes('(')) {
+        const lastOpen = commandArgs.lastIndexOf('(');
+        const respectiveClose = commandArgs
+          .map((arg, index) => [arg, index])
+          .filter((arg) => arg[0] === ')' && arg[1] > lastOpen)[0][1];
+        const innerGroup = commandArgs
+          .slice(lastOpen + 1, respectiveClose)
+          .join(' ');
+
+        commandArgs.splice(
+          lastOpen,
+          respectiveClose + 1 - lastOpen,
+          innerGroup,
+        );
+      }
 
       function execute(instructions) {
         const output = [];
 
         for (const instruction of instructions) {
+          if (instruction === '(') {
+            output.push(
+              ...execute(
+                instructions.splice(
+                  instructions.indexOf(instruction),
+                  instructions.lastIndexOf(')') -
+                    instructions.indexOf(instruction),
+                ),
+              ),
+            );
+            continue;
+          }
+
           const arg = commandArgs[variables.indexOf(instruction)];
+
+          if (arg === '') {
+            return ['Empty arguments are not allowed!'];
+          }
 
           if (arg) {
             output.push(arg);
@@ -26,12 +59,12 @@ function Parser({ prefix, commands }) {
                 const subinstructions = instructions.slice(
                   instructions.indexOf(instruction) + 1,
                 );
-                const subargs = execute(subinstructions).split(' ');
+                const subargs = execute(subinstructions);
 
                 output.push(subcommand(subargs));
                 break;
               } else {
-                return `Subcommand not found '${identifier}'.`;
+                return [`Subcommand not found '${identifier}'.`];
               }
             }
           }
@@ -39,16 +72,18 @@ function Parser({ prefix, commands }) {
           output.push(instruction);
         }
 
-        return output.join(' ').trim();
+        return output;
       }
 
       if (variables.length > commandArgs.length) {
-        return `Insufficient arguments! This command requires the following arguments: '${variables.join(
-          ' ',
-        )}'`;
+        return [
+          `Insufficient arguments! This command requires the following arguments: '${variables.join(
+            ' ',
+          )}'`,
+        ];
       }
 
-      return execute(executionInstructions);
+      return execute(executionInstructions).join(' ').trim();
     };
 
     return command;
@@ -61,6 +96,18 @@ function Parser({ prefix, commands }) {
       const tokens = content.slice(prefix.length).split(' ');
       const identifier = tokens[0];
       const params = tokens.slice(1);
+
+      for (let [index, param] of params.entries()) {
+        if (param.startsWith('(') && param !== '(') {
+          param = param.slice(1);
+          params.splice(index, 1, '(', param);
+        } else {
+          while (param.endsWith(')') && param !== ')') {
+            param = param.slice(0, -1);
+            params.splice(index, 1, param, ')');
+          }
+        }
+      }
 
       if (identifier === '') {
         return;
