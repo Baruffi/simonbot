@@ -47,7 +47,3 @@ a
 !say_hi
 hi
 ```
-
-## TODO
-
-- Implement grouping

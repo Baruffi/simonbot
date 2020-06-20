@@ -1,90 +1,106 @@
+const open = '(';
+const close = ')';
+const arrow = '->';
+
 function Parser({ prefix, commands }) {
-  function generateCommand(commandInstructions) {
-    const command = (commandArgs) => {
-      const arrow = commandInstructions.indexOf('->');
-      const variables = commandInstructions.slice(0, arrow === -1 ? 0 : arrow);
-      const executionInstructions = commandInstructions.slice(arrow + 1);
+  function parseGrouping(values, join) {
+    while (values.includes(open)) {
+      const lastOpen = values.lastIndexOf(open);
+      const respectiveClose = values.slice(lastOpen).indexOf(close) + lastOpen;
 
-      while (commandArgs.includes('(')) {
-        const lastOpen = commandArgs.lastIndexOf('(');
-        const respectiveClose = commandArgs
-          .map((arg, index) => [arg, index])
-          .filter((arg) => arg[0] === ')' && arg[1] > lastOpen)[0][1];
-        const innerGroup = commandArgs
-          .slice(lastOpen + 1, respectiveClose)
-          .join(' ');
-
-        commandArgs.splice(
-          lastOpen,
-          respectiveClose + 1 - lastOpen,
-          innerGroup,
-        );
+      if (respectiveClose < lastOpen) {
+        return false;
       }
 
-      function execute(instructions) {
+      const innerGroup = join
+        ? values.slice(lastOpen + 1, respectiveClose).join(' ')
+        : values.slice(lastOpen + 1, respectiveClose);
+
+      values.splice(lastOpen, respectiveClose + 1 - lastOpen, innerGroup);
+    }
+
+    return true;
+  }
+
+  function generateCommand(commandInstructions) {
+    const sep = commandInstructions.indexOf(arrow);
+    const variables = commandInstructions.slice(0, sep === -1 ? 0 : sep);
+    const executionInstructions = commandInstructions.slice(sep + 1);
+
+    const successVars = parseGrouping(variables, false);
+    const successInst = parseGrouping(executionInstructions, false);
+
+    // console.log(`variables: ${variables}`);
+    // console.log(`executionInstructions: ${executionInstructions}`);
+
+    function command(commandArgs) {
+      const successArgs = parseGrouping(commandArgs, true);
+
+      // console.log(`commandArgs: ${commandArgs}`);
+
+      function executeVariable(variable) {
+        return commandArgs[variables.indexOf(variable)];
+      }
+
+      function executeInstruction(instruction) {
+        return executeVariable(instruction) || instruction;
+      }
+
+      function executeSubcommand(identifier, subinstructions) {
+        const subcommand = commands[identifier];
+
+        if (subcommand) {
+          const subargs = execute2(subinstructions);
+
+          return subcommand(subargs);
+        } else {
+          throw new Error(`Subcommand not found '${identifier}'.`);
+        }
+      }
+
+      function execute2(instructions) {
         const output = [];
 
-        for (const instruction of instructions) {
-          if (instruction === '(') {
-            output.push(
-              ...execute(
-                instructions.splice(
-                  instructions.indexOf(instruction),
-                  instructions.lastIndexOf(')') -
-                    instructions.indexOf(instruction),
-                ),
-              ),
-            );
-            continue;
-          }
-
-          const arg = commandArgs[variables.indexOf(instruction)];
-
-          if (arg === '') {
-            return ['Empty arguments are not allowed!'];
-          }
-
-          if (arg) {
-            output.push(arg);
-            continue;
-          }
-
-          if (instruction.startsWith(prefix)) {
-            const identifier = instruction.slice(prefix.length);
-
-            if (identifier) {
-              const subcommand = commands[identifier];
-
-              if (subcommand) {
-                const subinstructions = instructions.slice(
-                  instructions.indexOf(instruction) + 1,
-                );
-                const subargs = execute(subinstructions);
-
-                output.push(subcommand(subargs));
-                break;
-              } else {
-                return [`Subcommand not found '${identifier}'.`];
-              }
+        for (const [index, instruction] of instructions.entries()) {
+          if (typeof instruction === 'string') {
+            if (instruction.startsWith(prefix)) {
+              const identifier = instruction.slice(prefix.length);
+              const subinstructions = instructions.slice(index + 1);
+              output.push(executeSubcommand(identifier, subinstructions));
+              break;
+            } else {
+              output.push(executeInstruction(instruction));
             }
+          } else {
+            output.push(...execute2(instruction));
           }
-
-          output.push(instruction);
         }
 
         return output;
       }
 
-      if (variables.length > commandArgs.length) {
-        return [
-          `Insufficient arguments! This command requires the following arguments: '${variables.join(
-            ' ',
-          )}'`,
-        ];
+      if (!successArgs) {
+        throw new Error('Unmatched parenthesis found in command arguments.');
       }
 
-      return execute(executionInstructions).join(' ').trim();
-    };
+      if (commandArgs.includes('')) {
+        throw new Error('Empty arguments are not allowed.');
+      }
+
+      if (variables.length !== commandArgs.length) {
+        throw new Error(
+          `Incorrect arguments. This command requires exactly ${
+            variables.length
+          } argument${variables.length > 1 ? 's' : ''}.`,
+        );
+      }
+
+      return execute2(executionInstructions).join(' ').trim();
+    }
+
+    if (!(successVars && successInst)) {
+      throw new Error('Unmatched parenthesis found in command declaration.');
+    }
 
     return command;
   }
@@ -95,35 +111,44 @@ function Parser({ prefix, commands }) {
     if (content.startsWith(prefix)) {
       const tokens = content.slice(prefix.length).split(' ');
       const identifier = tokens[0];
-      const params = tokens.slice(1);
-
-      for (let [index, param] of params.entries()) {
-        if (param.startsWith('(') && param !== '(') {
-          param = param.slice(1);
-          params.splice(index, 1, '(', param);
-        } else {
-          while (param.endsWith(')') && param !== ')') {
-            param = param.slice(0, -1);
-            params.splice(index, 1, param, ')');
-          }
-        }
-      }
 
       if (identifier === '') {
         return;
       }
 
+      const params = tokens.slice(1);
+
+      for (let [index, param] of params.entries()) {
+        if (param.startsWith(open) && param !== open) {
+          param = param.slice(1);
+          params.splice(index, 1, open, param);
+        } else {
+          while (param.endsWith(close) && param !== close) {
+            param = param.slice(0, -1);
+            params.splice(index, 1, param, close);
+          }
+        }
+      }
+
       if (params[0] === '=') {
-        const command = generateCommand(params.slice(1));
+        try {
+          const command = generateCommand(params.slice(1));
 
-        commands[identifier] = command;
+          commands[identifier] = command;
 
-        return `Command '${identifier}' successfully set!`;
+          return `Command '${identifier}' successfully set!`;
+        } catch (error) {
+          return error.message;
+        }
       } else {
         const command = commands[identifier];
 
         if (command) {
-          return `${command(params)}`;
+          try {
+            return `${command(params)}`;
+          } catch (error) {
+            return error.message;
+          }
         } else {
           return `Command not found '${identifier}'.`;
         }
