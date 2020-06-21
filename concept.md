@@ -10,9 +10,9 @@ A bot that can be programmed through discord itself!
 
 `[prefix][name] [expression]` to call the named command.
 
-And an expression is either or all of: general text; the command's arguments; a call to another command.
+And an expression is either or multiple of: general text; the command's arguments; a call to another command.
 
-Just remember that `[prefix]`, `[name]` and `[argument]` cannot include any spaces, and commands are greedy by default.
+Just remember that `[prefix]`, `[name]` and `[argument]` cannot include any spaces, `[name]` and `[argument]` cannot start with `[prefix]`, and commands are greedy by default.
 
 ## Formalisation
 
@@ -47,3 +47,7 @@ a
 !say_hi
 hi
 ```
+
+## Closing words
+
+At the end of the day this is just a "for fun" project, so don't take it too seriously.

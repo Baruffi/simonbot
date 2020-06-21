@@ -1,8 +1,9 @@
 const open = '(';
 const close = ')';
 const arrow = '->';
+const assign = '=';
 
-function Parser({ prefix, commands }) {
+function Parser(prefix = '!', commands = {}) {
   function parseGrouping(values, join) {
     while (values.includes(open)) {
       const lastOpen = values.lastIndexOf(open);
@@ -125,7 +126,7 @@ function Parser({ prefix, commands }) {
       const params = tokens.slice(1);
 
       if (identifier === '') {
-        if (params[0] === '=') {
+        if (params[0] === assign) {
           const oldPrefix = prefix;
           prefix = params[1];
           return `Prefix '${oldPrefix}' updated to '${prefix}'.`;
@@ -144,7 +145,7 @@ function Parser({ prefix, commands }) {
         }
       }
 
-      if (params[0] === '=') {
+      if (params[0] === assign) {
         try {
           const command = generateCommand(params.slice(1));
 

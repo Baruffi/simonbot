@@ -3,11 +3,11 @@ const Eris = require('eris');
 const Parser = require('./core/Parser');
 const { token } = require('./auth.json');
 
-const parser = Parser({ prefix: '!', commands: {} });
+const parser = Parser();
 
 const client = Client(parser);
 
-const bot = new Eris(token);
+const bot = Eris(token);
 
 bot.on('ready', () => {
   console.log('Ready!');
