@@ -2,6 +2,11 @@
   "name": "simonbot",
   "version": "1.0.0",
   "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Baruffi/simonbot.git"
+  },
+  "author": "Baruffi",
   "license": "MIT",
   "dependencies": {
     "eris": "^0.13.2"
