@@ -122,12 +122,15 @@ function Parser({ prefix, commands }) {
     if (content.startsWith(prefix)) {
       const tokens = content.slice(prefix.length).split(' ');
       const identifier = tokens[0];
+      const params = tokens.slice(1);
 
       if (identifier === '') {
-        return;
+        if (params[0] === '=') {
+          const oldPrefix = prefix;
+          prefix = params[1];
+          return `Prefix '${oldPrefix}' updated to '${prefix}'.`;
+        }
       }
-
-      const params = tokens.slice(1);
 
       for (let [index, param] of params.entries()) {
         if (param.startsWith(open) && param !== open) {
@@ -147,7 +150,7 @@ function Parser({ prefix, commands }) {
 
           commands[identifier] = command;
 
-          return `Command '${identifier}' successfully set!`;
+          return `Command '${identifier}' successfully set.`;
         } catch (error) {
           return error.message;
         }
