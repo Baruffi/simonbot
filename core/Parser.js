@@ -66,7 +66,18 @@ function Parser({ prefix, commands }) {
             if (instruction.startsWith(prefix) && instruction !== prefix) {
               const identifier = instruction.slice(prefix.length);
               const subinstructions = instructions.slice(index + 1);
-              output.push(executeSubcommand(identifier, subinstructions));
+
+              try {
+                output.push(executeSubcommand(identifier, subinstructions));
+              } catch (error) {
+                throw new Error(
+                  `On subcommand '${identifier}':\n${error.message}`.replace(
+                    /\n/g,
+                    '\n\t',
+                  ),
+                );
+              }
+
               break;
             } else {
               output.push(executeInstruction(instruction));
