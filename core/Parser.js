@@ -84,7 +84,7 @@ function Parser(prefix = '!', commands = {}) {
               output.push(executeInstruction(instruction));
             }
           } else {
-            output.push(...execute(instruction));
+            output.push(execute(instruction).join(' '));
           }
         }
 
