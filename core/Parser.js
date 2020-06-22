@@ -131,6 +131,7 @@ function Parser(prefix = '!', commands = {}) {
           prefix = params[1];
           return `Prefix '${oldPrefix}' updated to '${prefix}'.`;
         }
+        return;
       }
 
       for (let [index, param] of params.entries()) {
