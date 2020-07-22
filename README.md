@@ -14,6 +14,20 @@ And an expression is either or multiple of: general text; the command's argument
 
 Just remember that `[prefix]`, `[name]` and `[argument]` cannot include any spaces, `[name]` and `[argument]` cannot start with `[prefix]`, and commands are greedy by default.
 
+## Examples
+
+```md
+!say = text -> text
+
+!say a
+a
+
+!say_hi = !say hi
+
+!say_hi
+hi
+```
+
 ## Formalisation
 
 Backus Naur Form (BNF) is a formal way to define a programming language. Here it was used to formally define the bot's commands in terms of regex. You can see it is heavily inspired by lambda calculus.
@@ -34,20 +48,11 @@ Backus Naur Form (BNF) is a formal way to define a programming language. Here it
 <grouping> := ( <expression> )
 ```
 
-## Examples
+## Customization
 
-```md
-!say = text -> text
+By modifying the index file, this project can easily be utilized with different frameworks, as it was designed to not be dependent on any external resources. Feel free to play around and adapt it to your liking.
 
-!say a
-a
+## TODO
 
-!say_hi = !say hi
-
-!say_hi
-hi
-```
-
-## Closing words
-
-At the end of the day this is just a "for fun" project, so don't take it too seriously.
+- Completely isolate error handling from the parser
+- Add default commands
