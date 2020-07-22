@@ -3,7 +3,51 @@ const close = ')';
 const arrow = '->';
 const assign = '=';
 
+// TODO: make a stack trace of all actions in a global context object to improve error throwing
 function Parser(prefix = '!', commands = {}) {
+  function getIdentifier(token) {
+    return token.slice(prefix.length);
+  }
+
+  function getParams(tokens) {
+    const params = tokens.slice(1);
+
+    for (let [index, param] of params.entries()) {
+      if (param.startsWith(open) && param !== open) {
+        param = param.slice(1);
+        params.splice(index, 1, open, param);
+      } else {
+        while (param.endsWith(close) && param !== close) {
+          param = param.slice(0, -1);
+          params.splice(index, 1, param, close);
+        }
+      }
+    }
+
+    return params;
+  }
+
+  function setPrefix(newPrefix) {
+    if (
+      newPrefix !== assign &&
+      newPrefix !== arrow &&
+      newPrefix !== open &&
+      newPrefix !== close
+    ) {
+      prefix = newPrefix;
+    } else {
+      throw new Error(`'${newPrefix}' is not a valid new prefix.`);
+    }
+  }
+
+  function setCommand(identifier, command) {
+    commands[identifier] = command;
+  }
+
+  function getCommand(identifier) {
+    return commands[identifier];
+  }
+
   function parseGrouping(values, join) {
     while (values.includes(open)) {
       const lastOpen = values.lastIndexOf(open);
@@ -65,20 +109,10 @@ function Parser(prefix = '!', commands = {}) {
         for (const [index, instruction] of instructions.entries()) {
           if (typeof instruction === 'string') {
             if (instruction.startsWith(prefix) && instruction !== prefix) {
-              const identifier = instruction.slice(prefix.length);
+              const identifier = getIdentifier(instruction);
               const subinstructions = instructions.slice(index + 1);
 
-              try {
-                output.push(executeSubcommand(identifier, subinstructions));
-              } catch (error) {
-                throw new Error(
-                  `On subcommand '${identifier}':\n${error.message}`.replace(
-                    /\n/g,
-                    '\n\t',
-                  ),
-                );
-              }
-
+              output.push(executeSubcommand(identifier, subinstructions));
               break;
             } else {
               output.push(executeInstruction(instruction));
@@ -100,6 +134,7 @@ function Parser(prefix = '!', commands = {}) {
       }
 
       if (variables.length !== commandArgs.length) {
+        // TODO: improve this error message.
         throw new Error(
           `Incorrect arguments. This command requires exactly ${
             variables.length
@@ -121,52 +156,36 @@ function Parser(prefix = '!', commands = {}) {
     const content = msg.trim();
 
     if (content.startsWith(prefix)) {
-      const tokens = content.slice(prefix.length).split(' ');
-      const identifier = tokens[0];
-      const params = tokens.slice(1);
+      const tokens = content.split(' ');
+      const params = getParams(tokens);
+      const identifier = getIdentifier(tokens[0]);
 
       if (identifier === '') {
         if (params[0] === assign) {
           const oldPrefix = prefix;
-          prefix = params[1];
-          return `Prefix '${oldPrefix}' updated to '${prefix}'.`;
+          const newPrefix = params[1];
+
+          setPrefix(newPrefix);
+
+          return `Prefix '${oldPrefix}' updated to '${newPrefix}'.`;
         }
+
         return;
       }
 
-      for (let [index, param] of params.entries()) {
-        if (param.startsWith(open) && param !== open) {
-          param = param.slice(1);
-          params.splice(index, 1, open, param);
-        } else {
-          while (param.endsWith(close) && param !== close) {
-            param = param.slice(0, -1);
-            params.splice(index, 1, param, close);
-          }
-        }
-      }
-
       if (params[0] === assign) {
-        try {
-          const command = generateCommand(params.slice(1));
+        const command = generateCommand(params.slice(1));
 
-          commands[identifier] = command;
+        setCommand(identifier, command);
 
-          return `Command '${identifier}' successfully set.`;
-        } catch (error) {
-          return error.message;
-        }
+        return `Command '${identifier}' successfully set.`;
       } else {
-        const command = commands[identifier];
+        const command = getCommand(identifier);
 
         if (command) {
-          try {
-            return `${command(params)}`;
-          } catch (error) {
-            return error.message;
-          }
+          return `${command(params)}`;
         } else {
-          return `Command not found '${identifier}'.`;
+          throw new Error(`Command not found '${identifier}'.`);
         }
       }
     }
