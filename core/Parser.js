@@ -12,14 +12,18 @@ function Parser(prefix = '!', commands = {}) {
   function getParams(tokens) {
     const params = tokens.slice(1);
 
+    let counter = 0;
+
     for (let [index, param] of params.entries()) {
       if (param.startsWith(open) && param !== open) {
         param = param.slice(1);
         params.splice(index, 1, open, param);
+        counter++;
       } else {
-        while (param.endsWith(close) && param !== close) {
+        while (param.endsWith(close) && param !== close && counter > 0) {
           param = param.slice(0, -1);
           params.splice(index, 1, param, close);
+          counter--;
         }
       }
     }
@@ -134,7 +138,7 @@ function Parser(prefix = '!', commands = {}) {
       }
 
       if (variables.length !== commandArgs.length) {
-        // TODO: improve this error message.
+        // TODO: improve this throw
         throw { identifier: 'ARGUMENT_ERROR', context: { target: variables.length } };
       }
 
