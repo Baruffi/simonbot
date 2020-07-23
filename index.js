@@ -4,7 +4,7 @@ const Parser = require('./core/Parser');
 const { token } = require('./auth.json');
 
 const actions = {
-  'NOT_VALID_ERROR': (context) => `'${context.target}' is not a valid '${context.identifier}'.`,
+  'NOT_VALID_ERROR': (context) => `'${context.target}' is not a valid ${context.identifier}.`,
   'NOT_FOUND_ERROR': (context) => `${context.target} not found '${context.identifier}'.`,
   'PARENTHESIS_ERROR': (context) => `Unmatched parenthesis found in ${context.target}.`,
   'ARGUMENT_ERROR': (context) => {

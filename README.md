@@ -58,7 +58,7 @@ Backus Naur Form (BNF) is a formal way to define a programming language. Here it
 
 ## Customization
 
-By changing the contents of index.js, you can make your own use of the parser and error handler. Change the prefix, create your own default commands, modify the error messages and even build your very own pipeline! This project can also easily be adapted to work with different frameworks, as it was designed to not be dependent on any external resources.
+By changing the contents of index.js, you can make your own use of the parser and error handler. Set your own default prefix and commands, modify the error messages and even build your very own pipeline from scratch! This project can also easily be adapted to work with different frameworks, as it was designed to not depend on any external libraries.
 
 ## Notes
 
@@ -66,5 +66,5 @@ This project was built with the functional programming paradigm. Thats why all t
 
 ## TODO
 
-- Completely isolate error handling from the parser
+- Completely isolate error handling from the parser (WIP)
 - Add default commands
