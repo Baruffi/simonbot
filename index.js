@@ -3,11 +3,17 @@ const Handler = require('./core/Handler');
 const Parser = require('./core/Parser');
 const { token } = require('./auth.json');
 
+const commands = {
+  error: () => {
+    throw 'UNKNOWN_ERROR';
+  }
+}
+
 const actions = {
-  'NOT_VALID_ERROR': (context) => `'${context.target}' is not a valid ${context.identifier}.`,
-  'NOT_FOUND_ERROR': (context) => `${context.target} not found '${context.identifier}'.`,
-  'PARENTHESIS_ERROR': (context) => `Unmatched parenthesis found in ${context.target}.`,
-  'ARGUMENT_ERROR': (context) => {
+  NOT_VALID_ERROR: (context) => `'${context.target}' is not a valid ${context.identifier}.`,
+  NOT_FOUND_ERROR: (context) => `${context.target} not found '${context.identifier}'.`,
+  PARENTHESIS_ERROR: (context) => `Unmatched parenthesis found in ${context.target}.`,
+  ARGUMENT_ERROR: (context) => {
     if (context) {
       return `Incorrect arguments. This command requires exactly ${
         context.target
@@ -18,9 +24,9 @@ const actions = {
   },
 };
 
-const handler = Handler(actions);
+const parser = Parser('!', commands);
 
-const parser = Parser('!');
+const handler = Handler(actions, 'Unknown error.');
 
 const bot = Eris(token);
 
@@ -35,7 +41,8 @@ bot.on('messageCreate', (msg) => {
     try {
       response = parser.parse(msg.content);
     } catch (error) {
-      response = handler.handle(error);
+      // console.log(error);
+      response = handler.handle(error.identifier, error.context);
     }
 
     if (response) {
