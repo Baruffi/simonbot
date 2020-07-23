@@ -3,14 +3,15 @@
 A bot that can be programmed through discord itself!
 
 - [SimonBot](#simonbot)
-  - [How to use](#how-to-use)
+  - [Getting started](#getting-started)
   - [Examples](#examples)
+  - [Grouping](#grouping)
   - [Formalisation](#formalisation)
   - [Customization](#customization)
   - [Notes](#notes)
   - [TODO](#todo)
 
-## How to use
+## Getting started
 
 **SimonBot**'s command syntax is quite simple and intuitive.
 
@@ -18,9 +19,9 @@ A bot that can be programmed through discord itself!
 
 `[prefix][name] [expression]` to call the named command.
 
-And an expression is either or multiple of: general text; the command's arguments; a call to another command.
+And an expression is either or multiple of: general text; the command's arguments; a call to another command; a group.
 
-Just remember that `[prefix]`, `[name]` and `[argument]` cannot include any spaces, `[name]` and `[argument]` cannot start with `[prefix]`, and commands are greedy by default.
+Just remember that `[prefix]`, `[name]` and `[argument]` cannot include any spaces, `[argument]` cannot start with `[prefix]`, and commands are greedy by default.
 
 ## Examples
 
@@ -35,6 +36,14 @@ a
 !say_hi
 hi
 ```
+
+## Grouping
+
+In order to make a group expression, you just have to surround it with parenthesis. Just make sure that the parenthesis are the outmost characters of any grouping expression!
+
+Parenthesis inside words such as `a(b` or `a)b` are treated as regular text. The algorithm used is smart enough to ignore any extra closing parenthesis, but every opening must be properly matched for your command to work!
+
+However, this means you can intentionally write parenthesis groups as regular text by escaping the open parenthesis character with a backslash as such: `\(`.
 
 ## Formalisation
 
