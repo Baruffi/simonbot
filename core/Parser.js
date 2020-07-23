@@ -36,7 +36,7 @@ function Parser(prefix = '!', commands = {}) {
     ) {
       prefix = newPrefix;
     } else {
-      throw new Error(`'${newPrefix}' is not a valid new prefix.`);
+      throw { identifier: 'NOT_VALID_ERROR', context: { target: newPrefix, identifier: 'new prefix' } };
     }
   }
 
@@ -99,7 +99,7 @@ function Parser(prefix = '!', commands = {}) {
 
           return subcommand(subargs);
         } else {
-          throw new Error(`Subcommand not found '${identifier}'.`);
+          throw { identifier: 'NOT_FOUND_ERROR', context: { target: 'Subcommand', identifier } };
         }
       }
 
@@ -126,27 +126,23 @@ function Parser(prefix = '!', commands = {}) {
       }
 
       if (!successArgs) {
-        throw new Error('Unmatched parenthesis found in command arguments.');
+        throw { identifier: 'PARENTHESIS_ERROR', context: { target: 'arguments' } };
       }
 
       if (commandArgs.includes('')) {
-        throw new Error('Empty arguments are not allowed.');
+        throw { identifier: 'ARGUMENT_ERROR' };
       }
 
       if (variables.length !== commandArgs.length) {
         // TODO: improve this error message.
-        throw new Error(
-          `Incorrect arguments. This command requires exactly ${
-            variables.length
-          } argument${variables.length > 1 ? 's' : ''}.`,
-        );
+        throw { identifier: 'ARGUMENT_ERROR', context: { target: variables.length } };
       }
 
       return execute(executionInstructions).join(' ').trim();
     }
 
     if (!(successVars && successInst)) {
-      throw new Error('Unmatched parenthesis found in command declaration.');
+      throw { identifier: 'PARENTHESIS_ERROR', context: { target: 'declaration' } };
     }
 
     return command;
@@ -185,7 +181,7 @@ function Parser(prefix = '!', commands = {}) {
         if (command) {
           return `${command(params)}`;
         } else {
-          throw new Error(`Command not found '${identifier}'.`);
+          throw { identifier: 'NOT_FOUND_ERROR', context: { target: 'Command', identifier } };
         }
       }
     }
