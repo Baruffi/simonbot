@@ -6,7 +6,6 @@ const Parser = require('./core/Parser');
 const Storage = require('./core/Storage');
 const { token } = require('./auth.json');
 
-// you would have to import / invoke this in another file
 async function openDb() {
   return open({
     filename: '/tmp/database.db',
