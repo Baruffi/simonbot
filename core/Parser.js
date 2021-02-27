@@ -205,7 +205,7 @@ function Parser(prefix = '!', commands = {}) {
 
           setPrefix(newPrefix);
 
-          return `Prefix '${oldPrefix}' updated to '${newPrefix}'.`;
+          throw { identifier: 'PREFIX_CHANGED', context: { target: oldPrefix, identifier: newPrefix } };
         }
 
         return;
@@ -216,7 +216,7 @@ function Parser(prefix = '!', commands = {}) {
 
         setCommand(identifier, command);
 
-        return `Command '${identifier}' successfully set.`;
+        throw { identifier: 'COMMAND_ADDED', context: { identifier } };
       } else {
         const command = getCommand(identifier);
 
