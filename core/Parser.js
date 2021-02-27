@@ -5,6 +5,26 @@ const assign = '=';
 
 // TODO: make a stack trace of all actions in a global context object to improve error throwing
 function Parser(prefix = '!', commands = {}) {
+  for (const identifier in commands) {
+    const command = commands[identifier];
+    const paramNames = getParamNames(command);
+
+    if (paramNames) {
+      commands[identifier] = generateCommand([...paramNames, '->', ...paramNames], command);
+    } else {
+      commands[identifier] = generateCommand('', command);
+    }
+  }
+
+  function getParamNames(func) {
+    const fnStr = func.toString();
+    const result = fnStr.slice(fnStr.indexOf('(') + 1, fnStr.indexOf(')')).match(/([^\s,]+)/g);
+
+    if (result) {
+      return result.map(paramName => paramName.replace(/[\[\]]/g, ''));
+    }
+  }
+
   function getIdentifier(token) {
     return token.slice(prefix.length);
   }
@@ -71,7 +91,7 @@ function Parser(prefix = '!', commands = {}) {
     return true;
   }
 
-  function generateCommand(commandInstructions) {
+  function generateCommand(commandInstructions, defaultBehavior = (output) => output) {
     const sep = commandInstructions.indexOf(arrow);
     const variables = commandInstructions.slice(0, sep === -1 ? 0 : sep);
     const executionInstructions = commandInstructions.slice(sep + 1);
@@ -88,7 +108,17 @@ function Parser(prefix = '!', commands = {}) {
       // console.log(`commandArgs: ${commandArgs}`);
 
       function executeVariable(variable) {
-        return commandArgs[variables.indexOf(variable)];
+        const value = commandArgs[variables.indexOf(variable)];
+
+        if (value && value.startsWith(prefix) && value !== prefix) {
+          const splitValue = value.split(' ');
+          const identifier = getIdentifier(splitValue[0]);
+          const subinstructions = splitValue.slice(1);
+
+          return executeSubcommand(identifier, subinstructions);
+        } else {
+          return value;
+        }
       }
 
       function executeInstruction(instruction) {
@@ -107,26 +137,34 @@ function Parser(prefix = '!', commands = {}) {
         }
       }
 
-      function execute(instructions) {
+      function execute(instructions, useDefault = false) {
         const output = [];
 
-        for (const [index, instruction] of instructions.entries()) {
-          if (typeof instruction === 'string') {
-            if (instruction.startsWith(prefix) && instruction !== prefix) {
-              const identifier = getIdentifier(instruction);
-              const subinstructions = instructions.slice(index + 1);
+        if (instructions) {
+          for (const [index, instruction] of instructions.entries()) {
+            if (typeof instruction === 'string') {
+              if (instruction.startsWith(prefix) && instruction !== prefix) {
+                const identifier = getIdentifier(instruction);
+                const subinstructions = instructions.slice(index + 1);
 
-              output.push(executeSubcommand(identifier, subinstructions));
-              break;
+                output.push(executeSubcommand(identifier, subinstructions));
+                break;
+              } else {
+                output.push(executeInstruction(instruction));
+              }
             } else {
-              output.push(executeInstruction(instruction));
+              output.push(execute(instruction).join(' '));
             }
-          } else {
-            output.push(execute(instruction).join(' '));
           }
         }
 
-        return output;
+        // console.log(`output: ${output}`);
+
+        if (useDefault) {
+          return defaultBehavior(output);
+        } else {
+          return output;
+        }
       }
 
       if (!successArgs) {
@@ -142,7 +180,7 @@ function Parser(prefix = '!', commands = {}) {
         throw { identifier: 'ARGUMENT_ERROR', context: { target: variables.length } };
       }
 
-      return execute(executionInstructions).join(' ').trim();
+      return execute(executionInstructions, true).join(' ').trim();
     }
 
     if (!(successVars && successInst)) {
