@@ -30,7 +30,7 @@ function Parser(prefix = '!', commands = {}) {
   }
 
   function getParams(tokens) {
-    const params = tokens.slice(1);
+    const params = tokens;
 
     let counter = 0;
 
@@ -103,35 +103,52 @@ function Parser(prefix = '!', commands = {}) {
     // console.log(`executionInstructions: ${executionInstructions}`);
 
     function command(commandArgs) {
-      const successArgs = parseGrouping(commandArgs, true);
+      const successArgs = parseGrouping(commandArgs, false);
+
+      let useVariables = true; // TODO: Encapsulate this logic better
 
       // console.log(`commandArgs: ${commandArgs}`);
 
       function executeVariable(variable) {
-        const value = commandArgs[variables.indexOf(variable)];
+        const variableIndex = variables.indexOf(variable);
+        const variableValue = commandArgs[variableIndex];
 
-        if (value && value.startsWith(prefix) && value !== prefix) {
-          const splitValue = value.split(' ');
-          const identifier = getIdentifier(splitValue[0]);
-          const subinstructions = splitValue.slice(1);
-
-          return executeSubcommand(identifier, subinstructions);
-        } else {
-          return value;
+        try {
+          if (variableValue) {
+            useVariables = false;
+            let result = '';
+            if (typeof variableValue === 'string') {
+              result = execute([variableValue]).join(' ');
+            } else {
+              result = execute(variableValue).join(' ');
+            }
+            useVariables = true;
+            return result;
+          }
+        } catch (error) {
+          throw { identifier: 'NESTED_ERROR', context: { target: 'Variable', identifier: variableValue, step: variableIndex, error } };
         }
       }
 
       function executeInstruction(instruction) {
-        return executeVariable(instruction) || instruction;
+        if (useVariables) {
+          return executeVariable(instruction) || instruction;
+        }
+
+        return instruction;
       }
 
-      function executeSubcommand(identifier, subinstructions) {
+      function executeSubcommand(identifier, subinstructions, step = 0) {
         const subcommand = commands[identifier];
 
         if (subcommand) {
           const subargs = execute(subinstructions);
 
-          return subcommand(subargs);
+          try {
+            return subcommand(subargs);
+          } catch (error) {
+            throw { identifier: 'NESTED_ERROR', context: { target: 'Subcommand', identifier, step, error } };
+          }
         } else {
           throw { identifier: 'NOT_FOUND_ERROR', context: { target: 'Subcommand', identifier } };
         }
@@ -140,6 +157,8 @@ function Parser(prefix = '!', commands = {}) {
       function execute(instructions, useDefault = false) {
         const output = [];
 
+        // console.log(`instructions: ${instructions}`);
+
         if (instructions) {
           for (const [index, instruction] of instructions.entries()) {
             if (typeof instruction === 'string') {
@@ -147,13 +166,17 @@ function Parser(prefix = '!', commands = {}) {
                 const identifier = getIdentifier(instruction);
                 const subinstructions = instructions.slice(index + 1);
 
-                output.push(executeSubcommand(identifier, subinstructions));
+                output.push(executeSubcommand(identifier, subinstructions, index));
                 break;
               } else {
                 output.push(executeInstruction(instruction));
               }
             } else {
-              output.push(execute(instruction).join(' '));
+              try {
+                output.push(execute(instruction).join(' '));
+              } catch (error) {
+                throw { identifier: 'NESTED_ERROR', context: { target: 'Instruction group', identifier: instruction, step: index, error } };
+              }
             }
           }
         }
@@ -176,8 +199,7 @@ function Parser(prefix = '!', commands = {}) {
       }
 
       if (variables.length !== commandArgs.length) {
-        // TODO: improve this throw
-        throw { identifier: 'ARGUMENT_ERROR', context: { target: variables.length } };
+        throw { identifier: 'ARGUMENT_ERROR', context: { target: 'arguments', expected: variables.length, received: commandArgs.length } };
       }
 
       return execute(executionInstructions, true).join(' ').trim();
@@ -195,7 +217,7 @@ function Parser(prefix = '!', commands = {}) {
 
     if (content.startsWith(prefix)) {
       const tokens = content.split(' ');
-      const params = getParams(tokens);
+      const params = getParams(tokens.slice(1));
       const identifier = getIdentifier(tokens[0]);
 
       if (identifier === '') {

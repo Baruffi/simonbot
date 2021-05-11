@@ -71,9 +71,7 @@ const actions = {
     `Unmatched parenthesis found in ${context.target}.`,
   ARGUMENT_ERROR: (context) => {
     if (context) {
-      return `Incorrect arguments. This command requires exactly ${
-        context.target
-      } argument${context.target > 1 ? 's' : ''}.`;
+      return `Received the wrong number of arguments. Expected: ${context.expected}. Received: ${context.received}.`;
     } else {
       return 'Empty arguments are not allowed.';
     }
@@ -84,6 +82,11 @@ const actions = {
     `Command '${context.identifier}' successfully set.`,
   PREFIX_CHANGED: (context) =>
     `Prefix '${context.target}' updated to '${context.identifier}'.`,
+  NESTED_ERROR: (context) =>
+    `${context.target} '${context.identifier}' ${
+      context.step ? `called at step ${context.step}` : 'returned'
+    }:
+  ${actions[context.error.identifier](context.error.context)}`,
 };
 
 const storage = Storage(saveDefinition, getDefinitions);
