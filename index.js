@@ -1,4 +1,4 @@
-const { openDb, storage, parser, handler, bot } = require('./setup');
+const { openDb, storage, parser, handler, bot, cache } = require('./setup');
 
 openDb().then(async (db) => {
   // await db.run(
@@ -14,9 +14,14 @@ storage.retrieve().then((retrievedCommands) => {
   for (const retrievedCommand of retrievedCommands) {
     try {
       parser.parse(retrievedCommand.DEFINITION);
-    } catch (error) {
-      console.log(error);
+    } catch (action) {
+      console.log(action);
     }
+
+    cache.cache(
+      retrievedCommand.IDENTIFIER,
+      `${retrievedCommand.DEFINITION}\n`
+    );
   }
 });
 
@@ -34,11 +39,6 @@ bot.on('messageCreate', (msg) => {
     } catch (action) {
       console.log(action);
       response = handler.handle(action.identifier, action.context);
-
-      // TODO: improve interaction between action handler and storage
-      if (action.identifier === 'COMMAND_ADDED') {
-        storage.store(action.context.identifier, content);
-      }
     }
 
     if (response) {

@@ -4,6 +4,7 @@ const { open } = require('sqlite');
 const Handler = require('./core/Handler');
 const Parser = require('./core/Parser');
 const Storage = require('./core/Storage');
+const Cache = require('./core/Cache');
 const { token } = require('./auth.json');
 
 async function openDb() {
@@ -15,7 +16,7 @@ async function openDb() {
 
 async function getDefinitions() {
   const db = await openDb();
-  const result = await db.all('SELECT DEFINITION FROM COMMANDS');
+  const result = await db.all('SELECT IDENTIFIER, DEFINITION FROM COMMANDS');
   await db.close();
 
   return result;
@@ -40,6 +41,11 @@ function decCooldown() {
   }
 }
 
+const commandList = {
+  help: '(default) !help = Help command with basic instructions on how to use the bot\n',
+  list: '(default) !list = List all registered commands\n',
+};
+
 const commands = {
   jsopr: ([opr, val1, val2]) => [`${eval(`${val1} ${opr} ${val2}`)}`],
   jsif: ([cond, val1, val2]) => (cond === 'true' ? [`${val1}`] : [`${val2}`]),
@@ -60,11 +66,18 @@ You can also add arguments to your commands by writing them like: \`!command = a
 You can even call other commands inside the command by using the prefix: \`!command1 = !command2\`.
 And finally, you can group everything with *parenthesis*! Then just call it as you normally would! Try it :D`,
   ],
+  list: () => cache.get(),
 };
 
 const actions = {
+  COMMAND_ADDED: (context) => {
+    storage.store(context.identifier, context.content);
+    cache.cache(context.identifier, `${context.content}\n`);
+
+    return `Command '${context.identifier}' successfully set.`;
+  },
   NOT_VALID_ERROR: (context) =>
-    `'${context.target}' is not a valid ${context.identifier}.`,
+    `'${context.identifier}' is not a valid ${context.target}.`,
   NOT_FOUND_ERROR: (context) =>
     `${context.target} not found '${context.identifier}'.`,
   PARENTHESIS_ERROR: (context) =>
@@ -78,16 +91,15 @@ const actions = {
   },
   COOLDOWN_ERROR: (context) =>
     `This command is on cooldown for ${context.target} seconds.`,
-  COMMAND_ADDED: (context) =>
-    `Command '${context.identifier}' successfully set.`,
   PREFIX_CHANGED: (context) =>
     `Prefix '${context.target}' updated to '${context.identifier}'.`,
   NESTED_ERROR: (context) =>
     `${context.target} '${context.identifier}' ${
       context.step ? `called at step ${context.step}` : 'returned'
-    }:
-  ${actions[context.error.identifier](context.error.context)}`,
+    }:\n${actions[context.error.identifier](context.error.context)}`,
 };
+
+const cache = Cache(commandList);
 
 const storage = Storage(saveDefinition, getDefinitions);
 
@@ -103,4 +115,5 @@ module.exports = {
   parser,
   handler,
   bot,
+  cache,
 };

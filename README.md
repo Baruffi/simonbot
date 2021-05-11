@@ -79,4 +79,4 @@ This project was built with the functional programming paradigm. Thats why all t
 - Create a top level context object with pre-defined structure for the parser to output to the handler
 - Add configurable timeout to the parser
 - Try to check for some errors in commands at "compile time"
-- Add a way to peek into command definitions
+- Add a way to peek into command definitions (WIP)

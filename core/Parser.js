@@ -16,6 +16,20 @@ function Parser(prefix = '!', commands = {}) {
     }
   }
 
+  function recursiveJoin(nestedStringArray) {
+    if (typeof nestedStringArray === 'string') {
+      return nestedStringArray;
+    }
+
+    let resultingString = '';
+
+    for (const item of nestedStringArray) {
+      resultingString += `${recursiveJoin(item)} `;
+    }
+
+    return resultingString.trim();
+  }
+
   function getParamNames(func) {
     const fnStr = func.toString();
     const result = fnStr.slice(fnStr.indexOf('(') + 1, fnStr.indexOf(')')).match(/([^\s,]+)/g);
@@ -36,13 +50,13 @@ function Parser(prefix = '!', commands = {}) {
 
     for (let [index, param] of params.entries()) {
       if (param.startsWith(open) && param !== open) {
-        param = param.slice(1);
-        params.splice(index, 1, open, param);
+        param = param.slice(open.length);
+        params.splice(index, open.length, open, param);
         counter++;
       } else {
         while (param.endsWith(close) && param !== close && counter > 0) {
-          param = param.slice(0, -1);
-          params.splice(index, 1, param, close);
+          param = param.slice(0, -close.length);
+          params.splice(index, close.length, param, close);
           counter--;
         }
       }
@@ -51,17 +65,12 @@ function Parser(prefix = '!', commands = {}) {
     return params;
   }
 
+  function isReserved(keyword) {
+    return keyword === assign || keyword === arrow || keyword === open || keyword === close;
+  }
+
   function setPrefix(newPrefix) {
-    if (
-      newPrefix !== assign &&
-      newPrefix !== arrow &&
-      newPrefix !== open &&
-      newPrefix !== close
-    ) {
-      prefix = newPrefix;
-    } else {
-      throw { identifier: 'NOT_VALID_ERROR', context: { target: newPrefix, identifier: 'new prefix' } };
-    }
+    prefix = newPrefix;
   }
 
   function setCommand(identifier, command) {
@@ -72,7 +81,7 @@ function Parser(prefix = '!', commands = {}) {
     return commands[identifier];
   }
 
-  function parseGrouping(values, join) {
+  function parseGrouping(values) {
     while (values.includes(open)) {
       const lastOpen = values.lastIndexOf(open);
       const respectiveClose = values.slice(lastOpen).indexOf(close) + lastOpen;
@@ -81,9 +90,7 @@ function Parser(prefix = '!', commands = {}) {
         return false;
       }
 
-      const innerGroup = join
-        ? values.slice(lastOpen + 1, respectiveClose).join(' ')
-        : values.slice(lastOpen + 1, respectiveClose);
+      const innerGroup = values.slice(lastOpen + 1, respectiveClose);
 
       values.splice(lastOpen, respectiveClose + 1 - lastOpen, innerGroup);
     }
@@ -96,14 +103,14 @@ function Parser(prefix = '!', commands = {}) {
     const variables = commandInstructions.slice(0, sep === -1 ? 0 : sep);
     const executionInstructions = commandInstructions.slice(sep + 1);
 
-    const successVars = parseGrouping(variables, false);
-    const successInst = parseGrouping(executionInstructions, false);
+    const successVars = parseGrouping(variables);
+    const successInst = parseGrouping(executionInstructions);
 
     // console.log(`variables: ${variables}`);
     // console.log(`executionInstructions: ${executionInstructions}`);
 
     function command(commandArgs) {
-      const successArgs = parseGrouping(commandArgs, false);
+      const successArgs = parseGrouping(commandArgs);
 
       let useVariables = true; // TODO: Encapsulate this logic better
 
@@ -126,7 +133,7 @@ function Parser(prefix = '!', commands = {}) {
             return result;
           }
         } catch (error) {
-          throw { identifier: 'NESTED_ERROR', context: { target: 'Variable', identifier: variableValue, step: variableIndex, error } };
+          throw { identifier: 'NESTED_ERROR', context: { target: 'Variable', identifier: typeof variableValue === 'string' ? variableValue : variableValue.join(' '), step: variableIndex, error } };
         }
       }
 
@@ -175,7 +182,7 @@ function Parser(prefix = '!', commands = {}) {
               try {
                 output.push(execute(instruction).join(' '));
               } catch (error) {
-                throw { identifier: 'NESTED_ERROR', context: { target: 'Instruction group', identifier: instruction, step: index, error } };
+                throw { identifier: 'NESTED_ERROR', context: { target: 'Instruction group', identifier: recursiveJoin(instruction), step: index, error } };
               }
             }
           }
@@ -215,6 +222,15 @@ function Parser(prefix = '!', commands = {}) {
   function parse(msg) {
     const content = msg.trim();
 
+    if (content.startsWith(prefix + open) && content.endsWith(close)) {
+      const tokens = content.slice(prefix.length + open.length).slice(0, -close.length).split(' ');
+      const params = getParams(tokens);
+
+      const command = generateCommand(params);
+
+      return `${command([])}`;
+    }
+
     if (content.startsWith(prefix)) {
       const tokens = content.split(' ');
       const params = getParams(tokens.slice(1));
@@ -225,6 +241,10 @@ function Parser(prefix = '!', commands = {}) {
           const oldPrefix = prefix;
           const newPrefix = params[1];
 
+          if (isReserved(newPrefix)) {
+            throw { identifier: 'NOT_VALID_ERROR', context: { identifier: newPrefix, target: 'new prefix' } };
+          }
+
           setPrefix(newPrefix);
 
           throw { identifier: 'PREFIX_CHANGED', context: { target: oldPrefix, identifier: newPrefix } };
@@ -234,16 +254,24 @@ function Parser(prefix = '!', commands = {}) {
       }
 
       if (params[0] === assign) {
+        if (isReserved(identifier)) {
+          throw { identifier: 'NOT_VALID_ERROR', context: { identifier, target: 'command identifier' } };
+        }
+
         const command = generateCommand(params.slice(1));
 
         setCommand(identifier, command);
 
-        throw { identifier: 'COMMAND_ADDED', context: { identifier } };
+        throw { identifier: 'COMMAND_ADDED', context: { identifier, content } };
       } else {
         const command = getCommand(identifier);
 
         if (command) {
-          return `${command(params)}`;
+          try {
+            return `${command(params)}`;
+          } catch (error) {
+            throw { identifier: 'NESTED_ERROR', context: { target: 'Command', identifier, content, error } };
+          }
         } else {
           throw { identifier: 'NOT_FOUND_ERROR', context: { target: 'Command', identifier } };
         }
