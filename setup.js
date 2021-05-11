@@ -96,9 +96,12 @@ const actions = {
   NESTED_ERROR: (context) =>
     `${context.target} '${context.identifier}' ${
       context.step ? `called at step ${context.step}` : 'returned'
-    }:\n${actions[context.error.identifier](context.error.context)}`,
+    }:\n${
+      typeof actions[context.error.identifier] === 'function'
+        ? actions[context.error.identifier](context.error.context)
+        : context.error
+    }`,
 };
-
 const cache = Cache(commandList);
 
 const storage = Storage(saveDefinition, getDefinitions);
