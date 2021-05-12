@@ -66,7 +66,7 @@ function Parser(prefix = '!', commands = {}) {
   }
 
   function isReserved(keyword) {
-    return keyword === assign || keyword === arrow || keyword === open || keyword === close;
+    return keyword === assign || keyword === arrow || keyword === open || keyword === close || keyword === prefix;
   }
 
   function setPrefix(newPrefix) {
