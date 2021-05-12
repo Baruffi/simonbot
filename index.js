@@ -1,29 +1,9 @@
-const { openDb, storage, parser, handler, bot, cache } = require('./setup');
+import Eris from 'eris';
+import Parser from './new/Parser.js';
+import auth from './auth.json';
 
-openDb().then(async (db) => {
-  // await db.run(
-  //   "DROP TABLE IF EXISTS COMMANDS"
-  // );
-  await db.run(
-    'CREATE TABLE IF NOT EXISTS COMMANDS (IDENTIFIER PRIMARY KEY, DEFINITION TEXT)'
-  );
-  await db.close();
-});
-
-storage.retrieve().then((retrievedCommands) => {
-  for (const retrievedCommand of retrievedCommands) {
-    try {
-      parser.parse(retrievedCommand.DEFINITION);
-    } catch (action) {
-      console.log(action);
-    }
-
-    cache.cache(
-      retrievedCommand.IDENTIFIER,
-      `${retrievedCommand.DEFINITION}\n`
-    );
-  }
-});
+const parser = Parser('!');
+const bot = Eris(auth.token);
 
 bot.on('ready', () => {
   console.log('Ready!');
@@ -35,10 +15,9 @@ bot.on('messageCreate', (msg) => {
     let response;
 
     try {
-      response = parser.parse(content);
-    } catch (action) {
-      console.log(action);
-      response = handler.handle(action.identifier, action.context);
+      response = parser(content);
+    } catch (error) {
+      console.log(error);
     }
 
     if (response) {
