@@ -3,6 +3,15 @@ import ParenthesisParser from './parsers/ParenthesisParser.js';
 import TokensTypeParser from './parsers/TokensTypeParser.js';
 import AssignmentParser from './parsers/AssignmentParser.js';
 import CommandParser from './parsers/CommandParser.js';
+import {
+  open,
+  close,
+  arrow,
+  assign,
+  terminator,
+} from './constants/reserved.js';
+
+const reserved = [open, close, arrow, assign, terminator];
 
 function Parser(prefix, commands = {}) {
   const stringParser = StringParser();
@@ -21,18 +30,22 @@ function Parser(prefix, commands = {}) {
 
   function assign(tokenGroup) {
     const [identifier, commandDefinition] = tokenGroup;
-    const [variables, executionInstructions] =
-      assignmentParser(commandDefinition);
 
-    if (identifier && variables && executionInstructions) {
-      const command = commandParser(variables, executionInstructions, prefix);
+    if (identifier && !reserved.includes(identifier)) {
+      const [variables, executionInstructions] =
+        assignmentParser(commandDefinition);
 
-      if (command) {
-        setCommand(identifier, command);
+      if (variables && executionInstructions) {
+        const command = commandParser(variables, executionInstructions, prefix);
+
+        if (command) {
+          setCommand(identifier, command);
+          throw 'Command assigned successfully!';
+        }
       }
     }
 
-    throw 'Command assigned successfully!';
+    throw 'Invalid identifier!';
   }
 
   function call(tokenGroup) {
@@ -94,7 +107,7 @@ function Parser(prefix, commands = {}) {
   function parse(text) {
     const output = [];
 
-    for (const line of text.split('\n')) {
+    for (const line of text.split(terminator)) {
       output.push(parseLine(line));
     }
 

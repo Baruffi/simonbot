@@ -6,11 +6,6 @@ function CommandParser(call) {
       }
 
       function getArgument(argumentIdx) {
-        // console.log('callArgs:');
-        // console.log(callArgs);
-        // console.log('argumentIdx:');
-        // console.log(argumentIdx);
-
         return callArgs[argumentIdx];
       }
 
@@ -29,9 +24,6 @@ function CommandParser(call) {
           return parseVariables(instruction);
         }
 
-        // console.log('variables:');
-        // console.log(variables);
-
         const variableIdx = variables.indexOf(instruction);
 
         if (variableIdx !== -1) {
@@ -45,8 +37,7 @@ function CommandParser(call) {
         const replacedInstructions = [];
 
         while (instructions.length) {
-          // console.log('instructions:');
-          // console.log(instructions);
+          instructions = parseVariables(instructions);
 
           const parsedInstruction = parseInstruction(
             instructions[0],
@@ -65,11 +56,6 @@ function CommandParser(call) {
       }
 
       function parseInstruction(instruction, nextInstructions) {
-        // console.log('instruction:');
-        // console.log(instruction);
-        // console.log('nextInstructions:');
-        // console.log(nextInstructions);
-
         if (typeof instruction !== 'string') {
           const replacedInstruction = parseInstructions(instruction);
 
@@ -94,32 +80,16 @@ function CommandParser(call) {
         while (result === null && nextCounter <= nextInstructions.length) {
           const nextInstructionsPart = nextInstructions.slice(0, nextCounter++);
 
-          // console.log('identifier:');
-          // console.log(getIdentifier(instruction));
-          // console.log('call arguments:');
-          // console.log(nextInstructionsPart);
-
           result = call([getIdentifier(instruction), nextInstructionsPart]);
         }
 
         if (result === null) {
-          // console.log('result was null, returning instruction:');
-          // console.log(instruction);
-
           return instruction;
         }
 
         if (nextInstructions.length) {
-          // console.log('the next instructions:');
-          // console.log(nextInstructions);
-          // console.log('result with next instructions:');
-          // console.log([result, ...nextInstructions.slice(nextCounter - 1)]);
-
           return [result, ...nextInstructions.slice(nextCounter - 1)];
         }
-
-        // console.log('result:');
-        // console.log(result);
 
         return result;
       }
@@ -128,14 +98,6 @@ function CommandParser(call) {
         if (callArgs.length < variables.length) {
           return null;
         }
-
-        // console.log('before parsing variables:');
-        // console.log(instructions);
-
-        instructions = parseVariables(instructions);
-
-        // console.log('after parsing variables:');
-        // console.log(instructions);
 
         return parseInstructions(instructions);
       }
