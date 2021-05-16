@@ -5,7 +5,7 @@ import auth from './auth.json';
 import Cache from './core/Cache.js';
 import Handler from './core/Handler.js';
 import Storage from './core/Storage.js';
-import Parser from './new/Parser.js';
+import Interpreter from './core/Interpreter.js';
 
 const { Database } = pkg;
 
@@ -87,6 +87,6 @@ export const storage = Storage(saveDefinition, getDefinitions);
 
 export const handler = Handler(actions, 'Unknown error.');
 
-export const parser = Parser(handler, '!', commands);
+export const interpreter = Interpreter(handler, '!', commands);
 
 export const bot = Eris(auth.token);

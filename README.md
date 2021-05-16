@@ -75,8 +75,4 @@ This project was built with the functional programming paradigm. Thats why all t
 
 ## TODO
 
-- Completely isolate response handling from the parser (WIP)
-- Create a top level context object with pre-defined structure for the parser to output to the handler (DONE!)
-- Add configurable timeout to the parser (NO LONGER AN OBJECTIVE)
-- Try to check for some errors in commands at "compile time"
-- Add a way to peek into command definitions (DONE!)
+- Completely isolate response handling from the parsers (WIP)

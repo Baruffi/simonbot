@@ -4,15 +4,15 @@ import {
   close,
   open,
   terminator,
-} from './constants/reserved.js';
-import AssignmentParser from './parsers/AssignmentParser.js';
-import CommandParser from './parsers/CommandParser.js';
-import ParameterParser from './parsers/ParameterParser.js';
-import ParenthesisParser from './parsers/ParenthesisParser.js';
-import StringParser from './parsers/StringParser.js';
-import TokensTypeParser from './parsers/TokensTypeParser.js';
+} from '../constants/reserved.js';
+import AssignmentParser from '../parsers/AssignmentParser.js';
+import CommandParser from '../parsers/CommandParser.js';
+import ParameterParser from '../parsers/ParameterParser.js';
+import ParenthesisParser from '../parsers/ParenthesisParser.js';
+import StringParser from '../parsers/StringParser.js';
+import TokensTypeParser from '../parsers/TokensTypeParser.js';
 
-function Parser(handler, prefix, commands = {}) {
+function Interpreter(handler, prefix, commands = {}) {
   const reserved = [open, close, arrow, assignment, terminator, prefix];
 
   const stringParser = StringParser();
@@ -181,4 +181,4 @@ function Parser(handler, prefix, commands = {}) {
   return parse;
 }
 
-export default Parser;
+export default Interpreter;

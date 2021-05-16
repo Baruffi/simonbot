@@ -1,4 +1,4 @@
-import { openDb, storage, parser, bot } from './setup.js';
+import { openDb, storage, interpreter, bot } from './setup.js';
 
 openDb().then(async (db) => {
   await db.run(
@@ -9,7 +9,7 @@ openDb().then(async (db) => {
 
 storage.retrieve().then((retrievedCommands) => {
   for (const retrievedCommand of retrievedCommands) {
-    parser(retrievedCommand.DEFINITION);
+    interpreter(retrievedCommand.DEFINITION);
   }
 });
 
@@ -20,7 +20,7 @@ bot.on('ready', () => {
 bot.on('messageCreate', (msg) => {
   if (!msg.author.bot) {
     const content = msg.content;
-    const response = parser(content);
+    const response = interpreter(content);
 
     if (response) {
       bot.createMessage(msg.channel.id, {
