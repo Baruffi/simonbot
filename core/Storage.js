@@ -13,4 +13,4 @@ function Storage(savefunc, loadfunc) {
   };
 }
 
-module.exports = Storage;
+export default Storage;

@@ -1,16 +1,18 @@
-const Eris = require('eris');
-const sqlite3 = require('sqlite3');
-const { open } = require('sqlite');
-const Handler = require('./core/Handler');
-const Parser = require('./core/Parser');
-const Storage = require('./core/Storage');
-const Cache = require('./core/Cache');
-const { token } = require('./auth.json');
+import Eris from 'eris';
+import { open } from 'sqlite';
+import pkg from 'sqlite3';
+import auth from './auth.json';
+import Cache from './core/Cache.js';
+import Handler from './core/Handler.js';
+import Storage from './core/Storage.js';
+import Parser from './new/Parser.js';
 
-async function openDb() {
+const { Database } = pkg;
+
+export async function openDb() {
   return open({
-    filename: '/tmp/database.db',
-    driver: sqlite3.Database,
+    filename: './tmp/database.db', // Change this path to save the database file somewhere else
+    driver: Database,
   });
 }
 
@@ -32,91 +34,59 @@ async function saveDefinition(identifier, definition) {
   await db.close();
 }
 
-let cooldown = 0;
-
-function decCooldown() {
-  if (cooldown > 0) {
-    cooldown -= 1;
-    setTimeout(decCooldown, 1000);
-  }
-}
-
 const commandList = {
-  help: '(default) !help = Help command with basic instructions on how to use the bot\n',
-  list: '(default) !list = List all registered commands\n',
+  help: '(default) !help = Help command with basic instructions on how to use the bot',
+  list: '(default) !list = List all registered commands',
+  say: '(default) !say = say something!',
 };
 
 const commands = {
-  jsopr: ([opr, val1, val2]) => [`${eval(`${val1} ${opr} ${val2}`)}`],
-  jsif: ([cond, val1, val2]) => (cond === 'true' ? [`${val1}`] : [`${val2}`]),
-  jsrand: () => [`${Math.random()}`],
-  cooldown: ([seconds]) => {
-    if (cooldown) {
-      throw { identifier: 'COOLDOWN_ERROR', context: { target: cooldown } };
-    } else {
-      cooldown = seconds;
-      setTimeout(decCooldown, 1000);
-      return [''];
-    }
-  },
-  help: () => [
-    `Hi! I'm SimonBot, but you can call me Simon :sunglasses:
+  help: () => `Hi! I'm SimonBot, but you can call me Simon :sunglasses:
 You can program your own commands for me by setting them with an \`=\` sign! Like: \`!command = text\`.
 You can also add arguments to your commands by writing them like: \`!command = argument1 argument2 ... -> text\` and even reference them in your text!
 You can even call other commands inside the command by using the prefix: \`!command1 = !command2\`.
 And finally, you can group everything with *parenthesis*! Then just call it as you normally would! Try it :D`,
-  ],
-  list: () => cache.get(),
+  list: () => cache.toString(),
+  say: (arg) => arg,
 };
 
 const actions = {
   COMMAND_ADDED: (context) => {
-    storage.store(context.identifier, context.content);
-    cache.cache(context.identifier, `${context.content}\n`);
+    storage.store(context.identifier, context.line);
+    cache.cache(context.identifier, context.line);
 
     return `Command '${context.identifier}' successfully set.`;
   },
   NOT_VALID_ERROR: (context) =>
-    `'${context.identifier}' is not a valid ${context.target}.`,
+    `'${context.identifier}' in '${context.line}' is not a valid ${context.target}.`,
   NOT_FOUND_ERROR: (context) =>
     `${context.target} not found '${context.identifier}'.`,
-  PARENTHESIS_ERROR: (context) =>
-    `Unmatched parenthesis found in ${context.target}.`,
-  ARGUMENT_ERROR: (context) => {
-    if (context) {
-      return `Received the wrong number of arguments. Expected: ${context.expected}. Received: ${context.received}.`;
+  PARSING_ERROR: (context) =>
+    `Error parsing ${context.target} at '${context.line}': ${context.error}`,
+  NESTED_ERROR: (context) => {
+    const output = [];
+
+    if (typeof context.error === 'string') {
+      output.push(actions[context.error](context));
     } else {
-      return 'Empty arguments are not allowed.';
+      output.push(context.error);
     }
+
+    while (context.previous) {
+      context = context.previous;
+
+      output.unshift(`${context.target} '${context.identifier}' returned:`);
+    }
+
+    return output.join('\n');
   },
-  COOLDOWN_ERROR: (context) =>
-    `This command is on cooldown for ${context.target} seconds.`,
-  PREFIX_CHANGED: (context) =>
-    `Prefix '${context.target}' updated to '${context.identifier}'.`,
-  NESTED_ERROR: (context) =>
-    `${context.target} '${context.identifier}' ${
-      context.step ? `called at step ${context.step}` : 'returned'
-    }:\n${
-      typeof actions[context.error.identifier] === 'function'
-        ? actions[context.error.identifier](context.error.context)
-        : context.error
-    }`,
 };
-const cache = Cache(commandList);
+export const cache = Cache(commandList);
 
-const storage = Storage(saveDefinition, getDefinitions);
+export const storage = Storage(saveDefinition, getDefinitions);
 
-const parser = Parser('!', commands);
+export const handler = Handler(actions, 'Unknown error.');
 
-const handler = Handler(actions, 'Unknown error.');
+export const parser = Parser(handler, '!', commands);
 
-const bot = Eris(token);
-
-module.exports = {
-  openDb,
-  storage,
-  parser,
-  handler,
-  bot,
-  cache,
-};
+export const bot = Eris(auth.token);

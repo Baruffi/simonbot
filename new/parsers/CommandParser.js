@@ -1,10 +1,10 @@
-function CommandParser(call) {
-  function parse(variables, executionInstructions, prefix) {
+function CommandParser(getIdentifier, call) {
+  function parse(
+    variables,
+    executionInstructions,
+    defaultBehavior = (output) => output
+  ) {
     function command(callArgs) {
-      function getIdentifier(token) {
-        return token.slice(prefix.length);
-      }
-
       function getArgument(argumentIdx) {
         return callArgs[argumentIdx];
       }
@@ -37,7 +37,9 @@ function CommandParser(call) {
         const replacedInstructions = [];
 
         while (instructions.length) {
-          instructions = parseVariables(instructions);
+          if (variables.length) {
+            instructions = parseVariables(instructions);
+          }
 
           const parsedInstruction = parseInstruction(
             instructions[0],
@@ -66,28 +68,30 @@ function CommandParser(call) {
           return replacedInstruction;
         }
 
-        if (instruction.startsWith(prefix) && instruction !== prefix) {
-          return parseSubcommand(instruction, nextInstructions);
+        const identifier = getIdentifier(instruction);
+
+        if (identifier) {
+          const result = parseSubcommand(identifier, nextInstructions);
+
+          if (result) {
+            return result;
+          }
         }
 
         return instruction;
       }
 
-      function parseSubcommand(instruction, nextInstructions) {
+      function parseSubcommand(identifier, nextInstructions) {
         let result = null;
         let nextCounter = 0;
 
         while (result === null && nextCounter <= nextInstructions.length) {
           const nextInstructionsPart = nextInstructions.slice(0, nextCounter++);
 
-          result = call([getIdentifier(instruction), nextInstructionsPart]);
+          result = call([identifier, nextInstructionsPart]);
         }
 
-        if (result === null) {
-          return instruction;
-        }
-
-        if (nextInstructions.length) {
+        if (result && nextInstructions.length) {
           return [result, ...nextInstructions.slice(nextCounter - 1)];
         }
 
@@ -102,7 +106,7 @@ function CommandParser(call) {
         return parseInstructions(instructions);
       }
 
-      return execute(executionInstructions);
+      return defaultBehavior(execute(executionInstructions));
     }
 
     return command;

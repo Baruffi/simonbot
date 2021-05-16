@@ -1,9 +1,17 @@
-import Eris from 'eris';
-import Parser from './new/Parser.js';
-import auth from './auth.json';
+import { openDb, storage, parser, bot } from './setup.js';
 
-const parser = Parser('!');
-const bot = Eris(auth.token);
+openDb().then(async (db) => {
+  await db.run(
+    'CREATE TABLE IF NOT EXISTS COMMANDS (IDENTIFIER PRIMARY KEY, DEFINITION TEXT)'
+  );
+  await db.close();
+});
+
+storage.retrieve().then((retrievedCommands) => {
+  for (const retrievedCommand of retrievedCommands) {
+    parser(retrievedCommand.DEFINITION);
+  }
+});
 
 bot.on('ready', () => {
   console.log('Ready!');
@@ -12,16 +20,14 @@ bot.on('ready', () => {
 bot.on('messageCreate', (msg) => {
   if (!msg.author.bot) {
     const content = msg.content;
-    let response;
-
-    try {
-      response = parser(content);
-    } catch (error) {
-      console.log(error);
-    }
+    const response = parser(content);
 
     if (response) {
-      bot.createMessage(msg.channel.id, response);
+      bot.createMessage(msg.channel.id, {
+        embed: {
+          description: response.slice(-2048),
+        },
+      });
     }
   }
 });

@@ -1,16 +1,12 @@
-import { assign } from '../constants/reserved.js';
+import { assignment } from '../constants/reserved.js';
 
-function TokensTypeParser() {
-  function parse(tokens, prefix) {
-    function getIdentifier(token) {
-      return token.slice(prefix.length);
-    }
-
+function TokensTypeParser(getIdentifier) {
+  function parse(tokens) {
     const identifier = getIdentifier(tokens[0]);
     const assignmentToken = tokens[1];
 
     if (identifier) {
-      if (assignmentToken === assign) {
+      if (assignmentToken === assignment) {
         return ['ASSIGNMENT', [identifier, tokens.slice(2)]];
       }
 

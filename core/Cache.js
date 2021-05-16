@@ -7,14 +7,17 @@ function Cache(cached = {}) {
     if (id) {
       return cached[id];
     }
+  }
 
-    return Object.values(cached);
+  function toString() {
+    return Object.values(cached).join('\n');
   }
 
   return {
     cache,
     get,
+    toString,
   };
 }
 
-module.exports = Cache;
+export default Cache;
