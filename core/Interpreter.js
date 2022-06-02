@@ -29,7 +29,7 @@ function Interpreter(handler, prefix, commands = {}) {
     if (paramNames) {
       commands[identifier] = commandParser(paramNames, paramNames, command);
     } else {
-      commands[identifier] = commandParser('', '', command);
+      commands[identifier] = commandParser([], [], command);
     }
   }
 
@@ -40,7 +40,9 @@ function Interpreter(handler, prefix, commands = {}) {
       .match(/([^\s,]+)/g);
 
     if (result) {
-      return result.map((paramName) => paramName.replace(/[\[\]]/g, ''));
+      return result
+        .map((paramName) => paramName.replace(/[\[\]]/g, ''))
+        .filter((paramName) => paramName !== 'metadata');
     }
   }
 
@@ -85,9 +87,9 @@ function Interpreter(handler, prefix, commands = {}) {
     }
   }
 
-  function executeCommand(command, commandArguments) {
+  function executeCommand(command, commandArguments, metadata) {
     try {
-      return command(commandArguments);
+      return command(commandArguments, metadata);
     } catch (error) {
       if (error !== 'NESTED_ERROR') {
         handler.addToContext('error', error);
@@ -112,7 +114,7 @@ function Interpreter(handler, prefix, commands = {}) {
     }
   }
 
-  function call(tokenGroup) {
+  function call(tokenGroup, metadata) {
     const [identifier, callArgs] = tokenGroup;
     const command = getCommand(identifier);
     const groupedArguments = parameterParser(callArgs);
@@ -121,56 +123,56 @@ function Interpreter(handler, prefix, commands = {}) {
     handler.addToContext('identifier', identifier);
 
     if (command) {
-      return executeCommand(command, groupedArguments);
+      return executeCommand(command, groupedArguments, metadata);
     }
 
     throw 'NOT_FOUND_ERROR';
   }
 
-  function assignCall(tokenGroup) {
+  function assignCall(tokenGroup, metadata) {
     const commandDefinition = tokenGroup;
 
     handler.addToContext('target', 'lambda expression');
 
     const command = generateCommand(commandDefinition);
 
-    return executeCommand(command, []);
+    return executeCommand(command, [], metadata);
   }
 
-  function pipeline(tokens) {
+  function pipeline(tokens, metadata) {
     const [type, tokenGroup] = tokensTypeParser(parenthesisParser(tokens));
 
     switch (type) {
       case 'ASSIGNMENT':
         return assign(tokenGroup);
       case 'CALL':
-        return call(tokenGroup) || tokens[0];
+        return call(tokenGroup, metadata) || tokens[0]; // TODO: make a more useful message for when the command returns empty
       case 'ASSIGNMENT_CALL':
-        return assignCall(tokenGroup);
+        return assignCall(tokenGroup, metadata);
       default:
         break;
     }
   }
 
-  function parseLine(line) {
+  function parseLine(line, metadata) {
     const tokens = stringParser(line, prefix);
 
     handler.addToContext('line', line);
 
     if (tokens) {
       try {
-        return pipeline(tokens);
+        return pipeline(tokens, metadata);
       } catch (identifier) {
         return handler.handle(identifier);
       }
     }
   }
 
-  function parse(text) {
+  function parse(text, metadata) {
     const output = [];
 
     for (const line of text.split(terminator)) {
-      output.push(parseLine(line.trim()));
+      output.push(parseLine(line.trim(), metadata));
 
       handler.clearContext();
     }

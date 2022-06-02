@@ -1,11 +1,12 @@
 import Eris from 'eris';
 import { open } from 'sqlite';
 import pkg from 'sqlite3';
-import auth from './auth.json';
+import auth from './auth.json' assert { type: 'json' };
+import { prefix } from './constants/reserved.js';
 import Cache from './core/Cache.js';
 import Handler from './core/Handler.js';
-import Storage from './core/Storage.js';
 import Interpreter from './core/Interpreter.js';
+import Storage from './core/Storage.js';
 
 const { Database } = pkg;
 
@@ -35,19 +36,38 @@ async function saveDefinition(identifier, definition) {
 }
 
 const commandList = {
-  help: '(default) !help = Help command with basic instructions on how to use the bot',
-  list: '(default) !list = List all registered commands',
-  say: '(default) !say = say something!',
+  helps: `(default) ${prefix}helps = Help command with basic instructions on how to use the bot`,
+  lists: `(default) ${prefix}lists = List all registered commands`,
+  says: `(default) ${prefix}says = say something!`,
+  cleans: `(default) ${prefix}cleans = clean a number of messages sent up to and including the command message!`,
 };
 
 const commands = {
-  help: () => `Hi! I'm SimonBot, but you can call me Simon :sunglasses:
-You can program your own commands for me by setting them with an \`=\` sign! Like: \`!command = text\`.
-You can also add arguments to your commands by writing them like: \`!command = argument1 argument2 ... -> text\` and even reference them in your text!
-You can even call other commands inside the command by using the prefix: \`!command1 = !command2\`.
+  helps: () => `Hi! I'm SimonBot, but you can call me Simon :sunglasses:
+You can program your own commands for me by setting them with an \`=\` sign! Like: \`${prefix}command = text\`.
+You can also add arguments to your commands by writing them like: \`${prefix}command = argument1 argument2 ... -> text\` and even reference them in your text!
+You can even call other commands inside the command by using the prefix: \`${prefix}command1 = ${prefix}command2\`.
 And finally, you can group everything with *parenthesis*! Then just call it as you normally would! Try it :D`,
-  list: () => cache.toString(),
-  say: (arg) => arg,
+  lists: () => cache.toString(),
+  says: (arg) => arg,
+  cleans: (arg, metadata) => {
+    try {
+      const [channelId, _, messageId] = metadata;
+      const channel = bot.getChannel(channelId);
+      const n_messages_to_delete = parseInt(arg);
+      if (channel && messageId && n_messages_to_delete > 0) {
+        channel
+          .getMessages({ before: messageId, limit: n_messages_to_delete })
+          .then((messages) =>
+            channel.deleteMessages([
+              ...messages.map((message) => message.id),
+              messageId,
+            ])
+          );
+        return `Cleaning ${n_messages_to_delete} messages!`;
+      }
+    } catch (error) {}
+  },
 };
 
 const actions = {
@@ -87,6 +107,6 @@ export const storage = Storage(saveDefinition, getDefinitions);
 
 export const handler = Handler(actions, 'Unknown error.');
 
-export const interpreter = Interpreter(handler, '!', commands);
+export const interpreter = Interpreter(handler, prefix, commands);
 
 export const bot = Eris(auth.token);

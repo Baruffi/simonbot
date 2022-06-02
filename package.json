@@ -10,8 +10,8 @@
   "author": "Baruffi",
   "license": "GPLV3+",
   "dependencies": {
-    "eris": "^0.13.2",
-    "sqlite": "^4.0.19",
-    "sqlite3": "^5.0.2"
+    "eris": "^0.16.1",
+    "sqlite": "^4.1.1",
+    "sqlite3": "^5.0.8"
   }
 }

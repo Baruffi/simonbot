@@ -1,4 +1,5 @@
-import { openDb, storage, interpreter, bot } from './setup.js';
+import { prefix } from './constants/reserved.js';
+import { bot, interpreter, openDb, storage } from './setup.js';
 
 openDb().then(async (db) => {
   await db.run(
@@ -19,15 +20,22 @@ bot.on('ready', () => {
 
 bot.on('messageCreate', (msg) => {
   if (!msg.author.bot) {
-    const content = msg.content;
-    const response = interpreter(content);
+    let content = msg.content;
 
-    if (response) {
-      bot.createMessage(msg.channel.id, {
-        embed: {
-          description: response.slice(-2048),
-        },
-      });
+    if (content.startsWith(prefix)) {
+      const response = interpreter(content, [
+        msg.channel.id,
+        msg.author.id,
+        msg.id,
+      ]);
+
+      if (response) {
+        bot.createMessage(msg.channel.id, {
+          embed: {
+            description: response.slice(-2048),
+          },
+        });
+      }
     }
   }
 });

@@ -4,7 +4,7 @@ function CommandParser(getIdentifier, call) {
     executionInstructions,
     defaultBehavior = (output) => output
   ) {
-    function command(callArgs) {
+    function command(callArgs, metadata) {
       function getArgument(argumentIdx) {
         return callArgs[argumentIdx];
       }
@@ -88,7 +88,7 @@ function CommandParser(getIdentifier, call) {
         while (result === null && nextCounter <= nextInstructions.length) {
           const nextInstructionsPart = nextInstructions.slice(0, nextCounter++);
 
-          result = call([identifier, nextInstructionsPart]);
+          result = call([identifier, nextInstructionsPart], metadata);
         }
 
         if (result && nextInstructions.length) {
@@ -106,7 +106,7 @@ function CommandParser(getIdentifier, call) {
         return parseInstructions(instructions);
       }
 
-      return defaultBehavior(execute(executionInstructions));
+      return defaultBehavior(execute(executionInstructions), metadata);
     }
 
     return command;
