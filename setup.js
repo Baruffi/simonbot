@@ -2,7 +2,7 @@ import Eris from 'eris';
 import { open } from 'sqlite';
 import pkg from 'sqlite3';
 import auth from './auth.json' assert { type: 'json' };
-import { prefix } from './constants/reserved.js';
+import { defaultPrefix } from './constants/prefixes.js';
 import Cache from './core/Cache.js';
 import Handler from './core/Handler.js';
 import Interpreter from './core/Interpreter.js';
@@ -36,78 +36,73 @@ async function saveDefinition(identifier, definition) {
 }
 
 const commandList = {
-  helps: `(default) ${prefix}helps = Help command with basic instructions on how to use the bot`,
-  lists: `(default) ${prefix}lists = List all registered commands`,
-  says: `(default) ${prefix}says = say something!`,
-  gets: `(default) ${prefix}gets = get the ids of a number of messages sent up to and including the command message!`,
-  cleans: `(default) ${prefix}cleans = remove messages from a channel by their ids!`,
+  helps: `(default) ${defaultPrefix}helps = Help command with basic instructions on how to use the bot`,
+  lists: `(default) ${defaultPrefix}lists = List all registered commands`,
+  says: `(default) ${defaultPrefix}says = say something!`,
+  gets: `(default) ${defaultPrefix}gets = get the ids of a number of messages sent up to and including the command message!`,
+  cleans: `(default) ${defaultPrefix}cleans = remove messages from a channel by their ids!`,
 };
 
 const commands = {
   helps: () => `Hi! I'm SimonBot, but you can call me Simon :sunglasses:
-You can program your own commands for me by setting them with an \`=\` sign! Like: \`${prefix}command = text\`.
-You can also add arguments to your commands by writing them like: \`${prefix}command = argument1 argument2 ... -> text\` and even reference them in your text!
-You can even call other commands inside the command by using the prefix: \`${prefix}command1 = ${prefix}command2\`.
+You can program your own commands for me by setting them with an \`=\` sign! Like: \`${defaultPrefix}command = text\`.
+You can also add arguments to your commands by writing them like: \`${defaultPrefix}command = argument1 argument2 ... -> text\` and even reference them in your text!
+You can even call other commands inside the command by using the defaultPrefix: \`${defaultPrefix}command1 = ${defaultPrefix}command2\`.
 And finally, you can group everything with *parenthesis*! Then just call it as you normally would! Try it :D`,
   lists: () => cache.toString(),
   says: (...args) => args.slice(1).join(' '),
   gets: async (
     metadata,
-    arg_get,
-    arg_skip,
-    arg_filter_author,
-    arg_filter_content
+    argGet,
+    argSkip,
+    argFilterAuthor,
+    argFilterContent
   ) => {
     handler.addToContext('target', 'argument');
-    handler.addToContext('identifier', [arg_get, arg_skip]);
+    handler.addToContext('identifier', [argGet, argSkip]);
     const [channelId, authorId, messageId] = metadata;
     const channel = bot.getChannel(channelId);
-    const n_messages_to_get = parseInt(arg_get);
-    const n_messages_to_skip = parseInt(arg_skip);
-    if (
-      channel &&
-      messageId &&
-      n_messages_to_get > 0 &&
-      n_messages_to_skip >= 0
-    ) {
-      const got_message_ids = [];
-      if (n_messages_to_get + n_messages_to_skip > 1) {
-        const got_messages = await channel.getMessages({
+    const nMessagesToGet = parseInt(argGet);
+    const nMessagesToSkip = parseInt(argSkip);
+    if (channel && messageId && nMessagesToGet > 0 && nMessagesToSkip >= 0) {
+      const gotMessageIds = [];
+      if (nMessagesToGet + nMessagesToSkip > 1) {
+        const gotMessages = await channel.getMessages({
           before: messageId,
-          limit: n_messages_to_get + n_messages_to_skip - 1,
+          limit: nMessagesToGet + nMessagesToSkip - 1,
         });
-        got_message_ids.push(
-          ...got_messages
+        gotMessageIds.push(
+          ...gotMessages
             .filter(
               (message) =>
                 message.author.id === bot.user.id ||
-                ((!arg_filter_content ||
-                  message.content === arg_filter_content) &&
-                  (!arg_filter_author ||
-                    (arg_filter_author === 'self'
+                ((argFilterContent === '0' ||
+                  message.content.includes(argFilterContent)) &&
+                  (argFilterAuthor === '0' ||
+                    (argFilterAuthor === 'self'
                       ? message.author.id === authorId
-                      : message.author.id === arg_filter_author)))
+                      : message.author.id === argFilterAuthor)))
             )
             .map((message) => message.id)
         );
       }
-      got_message_ids.push(messageId);
-      if (n_messages_to_skip > 0) {
-        return got_message_ids.slice(0, -n_messages_to_skip).join(' ');
+      gotMessageIds.push(messageId);
+      if (nMessagesToSkip > 0) {
+        return gotMessageIds.slice(0, -nMessagesToSkip).join(' ');
       }
-      return got_message_ids.join(' ');
+      return gotMessageIds.join(' ');
     }
     throw 'NOT_VALID_ERROR';
   },
-  cleans: async (metadata, ...messages_to_delete) => {
+  cleans: async (metadata, ...messagesToDelete) => {
     try {
       handler.addToContext('target', 'argument');
-      handler.addToContext('identifier', messages_to_delete);
+      handler.addToContext('identifier', messagesToDelete);
       const [channelId] = metadata;
       const channel = bot.getChannel(channelId);
-      if (channel && messages_to_delete.length > 0) {
-        await channel.deleteMessages(messages_to_delete);
-        return `Cleaned ${messages_to_delete.length} messages!`;
+      if (channel && messagesToDelete.length > 0) {
+        await channel.deleteMessages(messagesToDelete);
+        return `Cleaned ${messagesToDelete.length} messages!`;
       }
     } catch (error) {
       handler.addToContext('error', error);
@@ -157,6 +152,6 @@ export const storage = Storage(saveDefinition, getDefinitions);
 
 export const handler = Handler(actions, 'Unknown error.');
 
-export const interpreter = Interpreter(handler, prefix, commands);
+export const interpreter = Interpreter(handler, defaultPrefix, commands);
 
 export const bot = Eris(auth.token);

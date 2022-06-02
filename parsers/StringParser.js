@@ -1,4 +1,4 @@
-import { open, close } from '../constants/reserved.js';
+import { open, close, hash } from '../constants/reserved.js';
 
 function StringParser() {
   function parse(string, prefix) {
@@ -11,9 +11,11 @@ function StringParser() {
           .slice(0, -close.length);
       }
 
-      const tokens = content.split(' ');
+      const prefixPattern = new RegExp(prefix, 'g');
+      const hashPattern = new RegExp(hash, 'g');
 
-      return tokens;
+      const tokens = content.replace(prefixPattern, hash).split(' ');
+      return tokens.map((token) => token.replace(hashPattern, prefix));
     }
   }
 

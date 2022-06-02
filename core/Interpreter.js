@@ -2,6 +2,7 @@ import {
   arrow,
   assignment,
   close,
+  hash,
   open,
   terminator,
 } from '../constants/reserved.js';
@@ -13,7 +14,7 @@ import StringParser from '../parsers/StringParser.js';
 import TokensTypeParser from '../parsers/TokensTypeParser.js';
 
 function Interpreter(handler, prefix, commands = {}) {
-  const reserved = [open, close, arrow, assignment, terminator, prefix];
+  const reserved = [hash, open, close, arrow, assignment, terminator, prefix];
 
   const stringParser = StringParser();
   const parenthesisParser = ParenthesisParser();
@@ -146,7 +147,7 @@ function Interpreter(handler, prefix, commands = {}) {
       case 'ASSIGNMENT':
         return assign(tokenGroup);
       case 'CALL':
-        return await call(tokenGroup, metadata) || tokens[0]; // TODO: make a more useful message for when the command returns empty
+        return (await call(tokenGroup, metadata)) || tokens[0]; // TODO: make a more useful message for when the command returns empty
       case 'ASSIGNMENT_CALL':
         return await assignCall(tokenGroup, metadata);
       default:
