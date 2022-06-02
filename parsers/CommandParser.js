@@ -106,7 +106,13 @@ function CommandParser(getIdentifier, call) {
         return parseInstructions(instructions);
       }
 
-      return defaultBehavior(execute(executionInstructions), metadata);
+      const executionResult = execute(executionInstructions);
+
+      if (executionResult !== null) {
+        return defaultBehavior(executionResult, metadata);
+      }
+
+      return null;
     }
 
     return command;

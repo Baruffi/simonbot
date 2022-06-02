@@ -52,6 +52,8 @@ And finally, you can group everything with *parenthesis*! Then just call it as y
   says: (arg) => arg,
   cleans: (arg, metadata) => {
     try {
+      handler.addToContext('target', 'argument');
+      handler.addToContext('identifier', arg);
       const [channelId, _, messageId] = metadata;
       const channel = bot.getChannel(channelId);
       const n_messages_to_delete = parseInt(arg);
@@ -66,7 +68,11 @@ And finally, you can group everything with *parenthesis*! Then just call it as y
           );
         return `Cleaning ${n_messages_to_delete} messages!`;
       }
-    } catch (error) {}
+    } catch (error) {
+      handler.addToContext('error', error);
+      throw 'PARSING_ERROR';
+    }
+    throw 'NOT_VALID_ERROR';
   },
 };
 
