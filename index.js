@@ -7,9 +7,9 @@ openDb().then(async (db) => {
   await db.close();
 });
 
-storage.retrieve().then((retrievedCommands) => {
+storage.retrieve().then(async (retrievedCommands) => {
   for (const retrievedCommand of retrievedCommands) {
-    interpreter(retrievedCommand.DEFINITION);
+    await interpreter(retrievedCommand.DEFINITION);
   }
 });
 
@@ -17,11 +17,11 @@ bot.on('ready', () => {
   console.log('Ready!');
 });
 
-bot.on('messageCreate', (msg) => {
+bot.on('messageCreate', async (msg) => {
   if (!msg.author.bot) {
     let content = msg.content;
 
-    const response = interpreter(content, [
+    const response = await interpreter(content, [
       msg.channel.id,
       msg.author.id,
       msg.id,

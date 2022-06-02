@@ -87,9 +87,9 @@ function Interpreter(handler, prefix, commands = {}) {
     }
   }
 
-  function executeCommand(command, commandArguments, metadata) {
+  async function executeCommand(command, commandArguments, metadata) {
     try {
-      return command(commandArguments, metadata);
+      return await command(commandArguments, metadata);
     } catch (error) {
       if (error !== 'NESTED_ERROR') {
         handler.addToContext('error', error);
@@ -114,7 +114,7 @@ function Interpreter(handler, prefix, commands = {}) {
     }
   }
 
-  function call(tokenGroup, metadata) {
+  async function call(tokenGroup, metadata) {
     const [identifier, callArgs] = tokenGroup;
     const command = getCommand(identifier);
     const groupedArguments = parameterParser(callArgs);
@@ -123,56 +123,56 @@ function Interpreter(handler, prefix, commands = {}) {
     handler.addToContext('identifier', identifier);
 
     if (command) {
-      return executeCommand(command, groupedArguments, metadata);
+      return await executeCommand(command, groupedArguments, metadata);
     }
 
     throw 'NOT_FOUND_ERROR';
   }
 
-  function assignCall(tokenGroup, metadata) {
+  async function assignCall(tokenGroup, metadata) {
     const commandDefinition = tokenGroup;
 
     handler.addToContext('target', 'lambda expression');
 
     const command = generateCommand(commandDefinition);
 
-    return executeCommand(command, [], metadata);
+    return await executeCommand(command, [], metadata);
   }
 
-  function pipeline(tokens, metadata) {
+  async function pipeline(tokens, metadata) {
     const [type, tokenGroup] = tokensTypeParser(parenthesisParser(tokens));
 
     switch (type) {
       case 'ASSIGNMENT':
         return assign(tokenGroup);
       case 'CALL':
-        return call(tokenGroup, metadata) || tokens[0]; // TODO: make a more useful message for when the command returns empty
+        return await call(tokenGroup, metadata) || tokens[0]; // TODO: make a more useful message for when the command returns empty
       case 'ASSIGNMENT_CALL':
-        return assignCall(tokenGroup, metadata);
+        return await assignCall(tokenGroup, metadata);
       default:
         break;
     }
   }
 
-  function parseLine(line, metadata) {
+  async function parseLine(line, metadata) {
     const tokens = stringParser(line, prefix);
 
     handler.addToContext('line', line);
 
     if (tokens) {
       try {
-        return pipeline(tokens, metadata);
+        return await pipeline(tokens, metadata);
       } catch (identifier) {
         return handler.handle(identifier);
       }
     }
   }
 
-  function parse(text, metadata) {
+  async function parse(text, metadata) {
     const output = [];
 
     for (const line of text.split(terminator)) {
-      output.push(parseLine(line.trim(), metadata));
+      output.push(await parseLine(line.trim(), metadata));
 
       handler.clearContext();
     }

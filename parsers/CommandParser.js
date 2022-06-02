@@ -1,10 +1,6 @@
 function CommandParser(getIdentifier, call) {
-  function parse(
-    variables,
-    executionInstructions,
-    defaultBehavior = (output) => output
-  ) {
-    function command(callArgs, metadata) {
+  function parse(variables, executionInstructions, defaultConsumer) {
+    async function command(callArgs, metadata) {
       function getArgument(argumentIdx) {
         return callArgs[argumentIdx];
       }
@@ -33,7 +29,7 @@ function CommandParser(getIdentifier, call) {
         return instruction;
       }
 
-      function parseInstructions(instructions) {
+      async function parseInstructions(instructions) {
         const replacedInstructions = [];
 
         while (instructions.length) {
@@ -41,7 +37,7 @@ function CommandParser(getIdentifier, call) {
             instructions = parseVariables(instructions);
           }
 
-          const parsedInstruction = parseInstruction(
+          const parsedInstruction = await parseInstruction(
             instructions[0],
             instructions.length > 1 ? instructions.slice(1) : []
           );
@@ -57,9 +53,9 @@ function CommandParser(getIdentifier, call) {
         return replacedInstructions.join(' ');
       }
 
-      function parseInstruction(instruction, nextInstructions) {
+      async function parseInstruction(instruction, nextInstructions) {
         if (typeof instruction !== 'string') {
-          const replacedInstruction = parseInstructions(instruction);
+          const replacedInstruction = await parseInstructions(instruction);
 
           if (nextInstructions.length) {
             return [replacedInstruction, ...nextInstructions];
@@ -71,7 +67,7 @@ function CommandParser(getIdentifier, call) {
         const identifier = getIdentifier(instruction);
 
         if (identifier) {
-          const result = parseSubcommand(identifier, nextInstructions);
+          const result = await parseSubcommand(identifier, nextInstructions);
 
           if (result) {
             return result;
@@ -81,14 +77,14 @@ function CommandParser(getIdentifier, call) {
         return instruction;
       }
 
-      function parseSubcommand(identifier, nextInstructions) {
+      async function parseSubcommand(identifier, nextInstructions) {
         let result = null;
         let nextCounter = 0;
 
         while (result === null && nextCounter <= nextInstructions.length) {
           const nextInstructionsPart = nextInstructions.slice(0, nextCounter++);
 
-          result = call([identifier, nextInstructionsPart], metadata);
+          result = await call([identifier, nextInstructionsPart], metadata);
         }
 
         if (result && nextInstructions.length) {
@@ -98,21 +94,23 @@ function CommandParser(getIdentifier, call) {
         return result;
       }
 
-      function execute(instructions) {
+      async function execute(instructions) {
         if (callArgs.length < variables.length) {
           return null;
         }
 
-        return parseInstructions(instructions);
+        const parsedInstructions = await parseInstructions(instructions);
+
+        if (typeof defaultConsumer === 'function') {
+          return await Promise.resolve(
+            defaultConsumer(metadata, ...parsedInstructions.split(' '))
+          );
+        }
+
+        return parsedInstructions;
       }
 
-      const executionResult = execute(executionInstructions);
-
-      if (executionResult !== null) {
-        return defaultBehavior(executionResult, metadata);
-      }
-
-      return null;
+      return await execute(executionInstructions);
     }
 
     return command;

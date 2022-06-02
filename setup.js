@@ -39,7 +39,8 @@ const commandList = {
   helps: `(default) ${prefix}helps = Help command with basic instructions on how to use the bot`,
   lists: `(default) ${prefix}lists = List all registered commands`,
   says: `(default) ${prefix}says = say something!`,
-  cleans: `(default) ${prefix}cleans = clean a number of messages sent up to and including the command message!`,
+  gets: `(default) ${prefix}gets = get the ids of a number of messages sent up to and including the command message!`,
+  cleans: `(default) ${prefix}cleans = remove messages from a channel by their ids!`,
 };
 
 const commands = {
@@ -49,24 +50,45 @@ You can also add arguments to your commands by writing them like: \`${prefix}com
 You can even call other commands inside the command by using the prefix: \`${prefix}command1 = ${prefix}command2\`.
 And finally, you can group everything with *parenthesis*! Then just call it as you normally would! Try it :D`,
   lists: () => cache.toString(),
-  says: (arg) => arg,
-  cleans: (arg, metadata) => {
+  says: (...args) => args.slice(1).join(' '),
+  gets: async (metadata, arg_get, arg_skip) => {
+    handler.addToContext('target', 'argument');
+    handler.addToContext('identifier', [arg_get, arg_skip]);
+    const [channelId, _, messageId] = metadata;
+    const channel = bot.getChannel(channelId);
+    const n_messages_to_get = parseInt(arg_get);
+    const n_messages_to_skip = parseInt(arg_skip);
+    if (
+      channel &&
+      messageId &&
+      n_messages_to_get > 0 &&
+      n_messages_to_skip >= 0
+    ) {
+      const got_message_ids = [];
+      if (n_messages_to_get + n_messages_to_skip > 1) {
+        const got_messages = await channel.getMessages({
+          before: messageId,
+          limit: n_messages_to_get + n_messages_to_skip - 1,
+        });
+        got_message_ids.push(...got_messages.map((message) => message.id));
+      }
+      got_message_ids.push(messageId);
+      if (n_messages_to_skip > 0) {
+        return got_message_ids.slice(0, -n_messages_to_skip).join(' ');
+      }
+      return got_message_ids.join(' ');
+    }
+    throw 'NOT_VALID_ERROR';
+  },
+  cleans: async (metadata, ...messages_to_delete) => {
     try {
       handler.addToContext('target', 'argument');
-      handler.addToContext('identifier', arg);
-      const [channelId, _, messageId] = metadata;
+      handler.addToContext('identifier', messages_to_delete);
+      const [channelId] = metadata;
       const channel = bot.getChannel(channelId);
-      const n_messages_to_delete = parseInt(arg);
-      if (channel && messageId && n_messages_to_delete > 0) {
-        channel
-          .getMessages({ before: messageId, limit: n_messages_to_delete })
-          .then((messages) =>
-            channel.deleteMessages([
-              ...messages.map((message) => message.id),
-              messageId,
-            ])
-          );
-        return `Cleaning ${n_messages_to_delete} messages!`;
+      if (channel && messages_to_delete.length > 0) {
+        await channel.deleteMessages(messages_to_delete);
+        return `Cleaned ${messages_to_delete.length} messages!`;
       }
     } catch (error) {
       handler.addToContext('error', error);
@@ -78,6 +100,9 @@ And finally, you can group everything with *parenthesis*! Then just call it as y
 
 const actions = {
   COMMAND_ADDED: (context) => {
+    if (!context.identifier || !context.line) {
+      throw 'ATTEMPTED TO ADD INVALID COMMAND (NULL IDENTIFIER OR DEFINITION)';
+    }
     storage.store(context.identifier, context.line);
     cache.cache(context.identifier, context.line);
 
