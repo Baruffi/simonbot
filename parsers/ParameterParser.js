@@ -7,7 +7,7 @@ function ParameterParser() {
       const respectiveClose = tokens.slice(lastOpen).indexOf(close) + lastOpen;
 
       if (respectiveClose < lastOpen) {
-        throw `Imbalanced parenthesis brackets!`;
+        throw `Imbalanced parenthesis brackets! ${respectiveClose} < ${lastOpen}, "${tokens.join('|')}"`;
       }
 
       const innerGroup = tokens.slice(lastOpen + 1, respectiveClose);

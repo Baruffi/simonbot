@@ -51,13 +51,7 @@ You can even call other commands inside the command by using the defaultPrefix: 
 And finally, you can group everything with *parenthesis*! Then just call it as you normally would! Try it :D`,
   lists: () => cache.toString(),
   says: (...args) => args.slice(1).join(' '),
-  gets: async (
-    metadata,
-    argGet,
-    argSkip,
-    argFilterAuthor,
-    argFilterContent
-  ) => {
+  gets: async (metadata, argGet, argSkip, ...argFilter) => {
     handler.addToContext('target', 'argument');
     handler.addToContext('identifier', [argGet, argSkip]);
     const [channelId, authorId, messageId] = metadata;
@@ -71,17 +65,31 @@ And finally, you can group everything with *parenthesis*! Then just call it as y
           before: messageId,
           limit: nMessagesToGet + nMessagesToSkip - 1,
         });
+        const filters = argFilter
+          .join('')
+          .split(',')
+          .map((filter) =>
+            filter.split(':').map((filter_part) => filter_part.trim())
+          )
+          .reduce(
+            (obj, item) => ({
+              ...obj,
+              [item[0]]: item[1],
+            }),
+            {}
+          );
+
         gotMessageIds.push(
           ...gotMessages
             .filter(
               (message) =>
                 message.author.id === bot.user.id ||
-                ((argFilterContent === '0' ||
-                  message.content.includes(argFilterContent)) &&
-                  (argFilterAuthor === '0' ||
-                    (argFilterAuthor === 'self'
+                ((!filters['content'] ||
+                  message.content.match(filters['content'])) &&
+                  (!filters['authors'] ||
+                    (filters['authors'] === 'self'
                       ? message.author.id === authorId
-                      : message.author.id === argFilterAuthor)))
+                      : filters['authors'].includes(message.author.id))))
             )
             .map((message) => message.id)
         );
