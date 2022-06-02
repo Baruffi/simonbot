@@ -50,7 +50,7 @@ function CommandParser(getIdentifier, call) {
           }
         }
 
-        return replacedInstructions.join(' ');
+        return replacedInstructions.join(' ').replace(/\\\\/g, '\\');
       }
 
       async function parseInstruction(instruction, nextInstructions) {

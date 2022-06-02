@@ -51,10 +51,16 @@ You can even call other commands inside the command by using the prefix: \`${pre
 And finally, you can group everything with *parenthesis*! Then just call it as you normally would! Try it :D`,
   lists: () => cache.toString(),
   says: (...args) => args.slice(1).join(' '),
-  gets: async (metadata, arg_get, arg_skip) => {
+  gets: async (
+    metadata,
+    arg_get,
+    arg_skip,
+    arg_filter_author,
+    arg_filter_content
+  ) => {
     handler.addToContext('target', 'argument');
     handler.addToContext('identifier', [arg_get, arg_skip]);
-    const [channelId, _, messageId] = metadata;
+    const [channelId, authorId, messageId] = metadata;
     const channel = bot.getChannel(channelId);
     const n_messages_to_get = parseInt(arg_get);
     const n_messages_to_skip = parseInt(arg_skip);
@@ -70,7 +76,20 @@ And finally, you can group everything with *parenthesis*! Then just call it as y
           before: messageId,
           limit: n_messages_to_get + n_messages_to_skip - 1,
         });
-        got_message_ids.push(...got_messages.map((message) => message.id));
+        got_message_ids.push(
+          ...got_messages
+            .filter(
+              (message) =>
+                message.author.id === bot.user.id ||
+                ((!arg_filter_content ||
+                  message.content === arg_filter_content) &&
+                  (!arg_filter_author ||
+                    (arg_filter_author === 'self'
+                      ? message.author.id === authorId
+                      : message.author.id === arg_filter_author)))
+            )
+            .map((message) => message.id)
+        );
       }
       got_message_ids.push(messageId);
       if (n_messages_to_skip > 0) {
