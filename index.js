@@ -1,9 +1,6 @@
-const { openDb, storage, parser, handler, bot, cache } = require('./setup');
+import { bot, interpreter, openDb, storage } from './setup.js';
 
 openDb().then(async (db) => {
-  // await db.run(
-  //   "DROP TABLE IF EXISTS COMMANDS"
-  // );
   await db.run(
     'CREATE TABLE IF NOT EXISTS COMMANDS (IDENTIFIER PRIMARY KEY, DEFINITION TEXT)'
   );
@@ -12,16 +9,7 @@ openDb().then(async (db) => {
 
 storage.retrieve().then((retrievedCommands) => {
   for (const retrievedCommand of retrievedCommands) {
-    try {
-      parser.parse(retrievedCommand.DEFINITION);
-    } catch (action) {
-      console.log(action);
-    }
-
-    cache.cache(
-      retrievedCommand.IDENTIFIER,
-      `${retrievedCommand.DEFINITION}\n`
-    );
+    interpreter(retrievedCommand.DEFINITION);
   }
 });
 
@@ -31,18 +19,20 @@ bot.on('ready', () => {
 
 bot.on('messageCreate', (msg) => {
   if (!msg.author.bot) {
-    const content = msg.content;
-    let response;
+    let content = msg.content;
 
-    try {
-      response = parser.parse(content);
-    } catch (action) {
-      console.log(action);
-      response = handler.handle(action.identifier, action.context);
-    }
+    const response = interpreter(content, [
+      msg.channel.id,
+      msg.author.id,
+      msg.id,
+    ]);
 
     if (response) {
-      bot.createMessage(msg.channel.id, response);
+      bot.createMessage(msg.channel.id, {
+        embed: {
+          description: response.slice(-2048),
+        },
+      });
     }
   }
 });

@@ -1,16 +1,34 @@
-// TODO: Improve handler adding more functionality
 function Handler(actions, unknown = null) {
-  function handle(identifier, context) {
+  let context = {};
+
+  function addToContext(field, data) {
+    if (context[field]) {
+      context = { previous: { ...context } };
+    }
+
+    context[field] = data;
+  }
+
+  function clearContext() {
+    context = {};
+  }
+
+  function handle(identifier) {
+    console.log(identifier);
+    console.log(context);
+
     const action = actions[identifier];
 
     if (typeof action === 'function') {
-      return action(context);
+      const result = action(context);
+
+      return result;
     }
 
     return unknown;
   }
 
-  return { handle };
+  return { addToContext, clearContext, handle };
 }
 
-module.exports = Handler;
+export default Handler;
