@@ -52,11 +52,14 @@ const commandList = {
 const questions = {};
 
 const commands = {
-  helps: () => `Hi! I'm SimonBot, but you can call me Simon :sunglasses:
-You can program your own commands for me by setting them with an \`=\` sign! Like: \`${defaultPrefix}command = text\`.
-You can also add arguments to your commands by writing them like: \`${defaultPrefix}command = argument1 argument2 ... -> text\` and even reference them in your text!
-You can even call other commands inside the command by using the defaultPrefix: \`${defaultPrefix}command1 = ${defaultPrefix}command2\`.
-And finally, you can group everything with *parenthesis*! Then just call it as you normally would! Try it :D`,
+  helps: () => `Hi! I'm SimonBot!
+You can program your own commands by setting them with an \`=\` sign! As in: \`${defaultPrefix}command = text\`.
+Commands can be named anything as long as it does not include spaces or one of the reserved symbols in my configuration.
+You can also add arguments to your commands by writing them as such: \`${defaultPrefix}command = argument1 argument2 ... -> text\` and then every time they are mentioned in the command body they will be replaced by the argument value passed.
+You can even call other commands inside your new command: \`${defaultPrefix}command1 = ${defaultPrefix}command2\`.
+And, finally, you can group everything with \`(parenthesis)\` to handle multiple words as a single value.
+By combining these features with some of the default commands you can customize my functionality to your liking!
+And if you want to see all the current commands just call \`${defaultPrefix}lists\` :sunglasses:`,
   lists: () =>
     cache.toMap(([key, value]) => `**${key}**: ${value}`).join('\n\n'),
   defines: (metadata, command) => {
@@ -72,7 +75,7 @@ And finally, you can group everything with *parenthesis*! Then just call it as y
     const { channelId } = metadata;
     const message = await bot.getChannel(channelId).getMessage(messageId);
     await bot.addMessageReaction(channelId, message.id, reaction);
-    return '()';
+    return 'Reaction added!';
   },
   asks: (metadata, ...text) => {
     const { channelId, authorMention } = metadata;
