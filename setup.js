@@ -38,10 +38,18 @@ async function saveDefinition(identifier, definition) {
 const commandList = {
   helps: `(default) ${defaultPrefix}helps = Help command with basic instructions on how to use the bot`,
   lists: `(default) ${defaultPrefix}lists = List all registered commands`,
-  says: `(default) ${defaultPrefix}says = say something!`,
-  gets: `(default) ${defaultPrefix}gets = get the ids of a number of messages sent up to and including the command message!`,
-  cleans: `(default) ${defaultPrefix}cleans = remove messages from a channel by their ids!`,
+  defines: `(default) ${defaultPrefix}defines = command -> Print the definition for a specific command`,
+  targets: `(default) ${defaultPrefix}targets = targetidx list -> target a single value from a list and return it!`,
+  says: `(default) ${defaultPrefix}says = text -> say something!`,
+  reacts: `(default) ${defaultPrefix}reacts = reaction messageId -> simon reacts to a message with your choice of emote!`,
+  asks: `(default) ${defaultPrefix}asks = question -> ask a question to be answered on the respective channel later!`,
+  answers: `(default) ${defaultPrefix}answers = question -> answer the last question asked on the respective channel!`,
+  gets: `(default) ${defaultPrefix}gets = n_of_messages, n_of_skips, filter -> get the ids of a number of messages sent up to and including the command message!`,
+  cleans: `(default) ${defaultPrefix}cleans = messageIds -> remove messages from a channel by their ids!`,
+  identifies: `(default) ${defaultPrefix}identifies = identifier messageId -> get chosen information from the author of a message!`,
 };
+
+const questions = {};
 
 const commands = {
   helps: () => `Hi! I'm SimonBot, but you can call me Simon :sunglasses:
@@ -49,12 +57,47 @@ You can program your own commands for me by setting them with an \`=\` sign! Lik
 You can also add arguments to your commands by writing them like: \`${defaultPrefix}command = argument1 argument2 ... -> text\` and even reference them in your text!
 You can even call other commands inside the command by using the defaultPrefix: \`${defaultPrefix}command1 = ${defaultPrefix}command2\`.
 And finally, you can group everything with *parenthesis*! Then just call it as you normally would! Try it :D`,
-  lists: () => cache.toString(),
-  says: (...args) => args.slice(1).join(' '),
+  lists: () =>
+    cache.toMap(([key, value]) => `**${key}**: ${value}`).join('\n\n'),
+  defines: (metadata, command) => {
+    const definition = cache.get(command);
+    return definition ?? 'Could not define: command not found.';
+  },
+  targets: (metadata, argIdx, ...list) => {
+    const targetIdx = parseInt(argIdx);
+    return list[targetIdx];
+  },
+  says: (...text) => text.slice(1).join(' '),
+  reacts: async (metadata, reaction, messageId) => {
+    const { channelId } = metadata;
+    const message = await bot.getChannel(channelId).getMessage(messageId);
+    await bot.addMessageReaction(channelId, message.id, reaction);
+    return '()';
+  },
+  asks: (metadata, ...text) => {
+    const { channelId, authorMention } = metadata;
+    if (!questions[channelId]) {
+      questions[channelId] = [];
+    }
+    questions[channelId].push({
+      authorMention,
+      question: text.join(' '),
+    });
+    return 'Question successfully registered!';
+  },
+  answers: (metadata, ...text) => {
+    const { channelId, authorMention } = metadata;
+    if (questions[channelId] && questions[channelId].length > 0) {
+      const lastQuestion = questions[channelId].pop();
+      return `${lastQuestion.authorMention} asks: '${lastQuestion.question}'
+${authorMention} replies: '${text.join(' ')}'`;
+    }
+    return 'No questions in this channel!';
+  },
   gets: async (metadata, argGet, argSkip, ...argFilter) => {
     handler.addToContext('target', 'argument');
     handler.addToContext('identifier', [argGet, argSkip]);
-    const [channelId, authorId, messageId] = metadata;
+    const { channelId, authorId, messageId } = metadata;
     const channel = bot.getChannel(channelId);
     const nMessagesToGet = parseInt(argGet);
     const nMessagesToSkip = parseInt(argSkip);
@@ -83,13 +126,13 @@ And finally, you can group everything with *parenthesis*! Then just call it as y
           ...gotMessages
             .filter(
               (message) =>
-                message.author.id === bot.user.id ||
-                ((!filters['content'] ||
+                (!filters['content'] ||
                   message.content.match(filters['content'])) &&
-                  (!filters['authors'] ||
-                    (filters['authors'] === 'self'
-                      ? message.author.id === authorId
-                      : filters['authors'].includes(message.author.id))))
+                (!filters['authors'] ||
+                  (filters['authors'] === 'self'
+                    ? message.author.id === authorId ||
+                      message.author.id === bot.user.id
+                    : filters['authors'].includes(message.author.id)))
             )
             .map((message) => message.id)
         );
@@ -106,7 +149,7 @@ And finally, you can group everything with *parenthesis*! Then just call it as y
     try {
       handler.addToContext('target', 'argument');
       handler.addToContext('identifier', messagesToDelete);
-      const [channelId] = metadata;
+      const { channelId } = metadata;
       const channel = bot.getChannel(channelId);
       if (channel && messagesToDelete.length > 0) {
         await channel.deleteMessages(messagesToDelete);
@@ -117,6 +160,11 @@ And finally, you can group everything with *parenthesis*! Then just call it as y
       throw 'PARSING_ERROR';
     }
     throw 'NOT_VALID_ERROR';
+  },
+  identifies: async (metadata, identifier, messageId) => {
+    const { channelId } = metadata;
+    const message = await bot.getChannel(channelId).getMessage(messageId);
+    return message.author[identifier];
   },
 };
 

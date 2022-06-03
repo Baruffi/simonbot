@@ -21,19 +21,25 @@ bot.on('messageCreate', async (msg) => {
   if (!msg.author.bot) {
     let content = msg.content;
 
-    const response = await interpreter(content, [
-      msg.channel.id,
-      msg.author.id,
-      msg.id,
-    ]);
+    const response = await interpreter(content, {
+      channelId: msg.channel.id,
+      authorId: msg.author.id,
+      authorMention: msg.author.mention,
+      messageId: msg.id,
+    });
 
     if (response) {
-      bot.createMessage(msg.channel.id, {
-        embed: {
-          description: response.slice(-2048),
-        },
-      });
-    }
+      let sliceStart = 0;
+      while (sliceStart < response.length) {
+        const slice = response.slice(sliceStart, sliceStart + 2048);
+        bot.createMessage(msg.channel.id, {
+          embed: {
+            description: slice,
+          },
+        });
+        sliceStart += 2048;
+      }
+    } // TODO: implement some sort of file handler that can be interacted with by default commands to allow the bot to send images and alike
   }
 });
 

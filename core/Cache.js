@@ -9,14 +9,14 @@ function Cache(cached = {}) {
     }
   }
 
-  function toString() {
-    return Object.values(cached).join('\n');
+  function toMap(mappingFunc) {
+    return Object.entries(cached).map(mappingFunc);
   }
 
   return {
     cache,
     get,
-    toString,
+    toMap,
   };
 }
 
